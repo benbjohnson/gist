@@ -6,12 +6,13 @@ import (
 	"net/http"
 
 	"github.com/benbjohnson/gist"
+	"github.com/boltdb/bolt"
 )
 
 func main() {
 	var (
 		datadir = flag.String("d", "", "data directory")
-		addr    = flag.String("addr", ":50000", "bind address")
+		addr    = flag.String("addr", ":40000", "bind address")
 		token   = flag.String("token", "", "api token")
 		secret  = flag.String("secret", "", "api secret")
 	)
@@ -31,8 +32,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Open the database.
+	var db gist.DB
+	if err := db.Open(filepath.Join(*datadir, "db")); err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+
 	// Initialize the handler.
 	h := gist.Handler{
+		DB:     &db,
 		Path:   *datadir,
 		Token:  *token,
 		Secret: *secret,
