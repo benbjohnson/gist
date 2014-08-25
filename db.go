@@ -1,6 +1,8 @@
 package gist
 
 import (
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -26,7 +28,8 @@ func (db *DB) Open(path string, mode os.FileMode) error {
 	return db.Update(func(tx *Tx) error {
 		// Initialize the top-level buckets.
 		var meta, _ = tx.CreateBucketIfNotExists([]byte("meta"))
-		tx.CreateBucketIfNotExists([]byte("users"))
+		_, _ = tx.CreateBucketIfNotExists([]byte("users"))
+		_, _ = tx.CreateBucketIfNotExists([]byte("gists"))
 
 		// Initialize secure cookie store.
 		secret := meta.Get([]byte("secret"))
@@ -61,4 +64,33 @@ func (db *DB) Update(fn func(*Tx) error) error {
 // Tx represents an application-level transaction.
 type Tx struct {
 	*bolt.Tx
+}
+
+// users retrieves the users bucket.
+func (tx *Tx) users() *bolt.Bucket { return tx.Bucket([]byte("users")) }
+
+// User retrieves an user from the database by ID.
+func (tx *Tx) User(id int64) (u *User, err error) {
+	if v := tx.users().Get(i64tob(id)); v != nil {
+		err = json.Unmarshal(v, &u)
+	}
+	return
+}
+
+// SaveUser stores an user in the database.
+func (tx *Tx) SaveUser(u *User) error {
+	assert(u != nil, "nil user")
+	assert(u.ID != 0, "user id required")
+	b, err := json.Marshal(u)
+	if err != nil {
+		return fmt.Errorf("marshal user: %s", err)
+	}
+	return tx.users().Put(i64tob(int64(u.ID)), b)
+}
+
+// Converts an integer to a big-endian encoded byte slice.
+func i64tob(v int64) []byte {
+	var b = make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }

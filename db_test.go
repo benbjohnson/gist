@@ -14,6 +14,23 @@ func TestDB_Open(t *testing.T) {
 	ok(t, db.Close())
 }
 
+// Ensure that a user can be persisted to the database.
+func TestTx_SaveUser(t *testing.T) {
+	db := NewTestDB()
+	defer db.Close()
+
+	ok(t, db.Update(func(tx *gist.Tx) error {
+		ok(t, tx.SaveUser(&gist.User{ID: 100, Username: "john", AccessToken: "1234"}))
+		return nil
+	}))
+
+	ok(t, db.View(func(tx *gist.Tx) error {
+		u, _ := tx.User(100)
+		equals(t, &gist.User{ID: 100, Username: "john", AccessToken: "1234"}, u)
+		return nil
+	}))
+}
+
 // TestDB wraps the DB to provide helper functions and clean up.
 type TestDB struct {
 	*gist.DB
