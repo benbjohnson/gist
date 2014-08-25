@@ -66,6 +66,28 @@ type Tx struct {
 	*bolt.Tx
 }
 
+// gists retrieves the gists bucket.
+func (tx *Tx) gists() *bolt.Bucket { return tx.Bucket([]byte("gists")) }
+
+// Gist retrieves a gist from the database by ID.
+func (tx *Tx) Gist(id string) (g *Gist, err error) {
+	if v := tx.gists().Get([]byte(id)); v != nil {
+		err = json.Unmarshal(v, &g)
+	}
+	return
+}
+
+// SaveGist stores a gist in the database.
+func (tx *Tx) SaveGist(g *Gist) error {
+	assert(g != nil, "nil gist")
+	assert(g.ID != "", "gist id required")
+	b, err := json.Marshal(g)
+	if err != nil {
+		return fmt.Errorf("marshal gist: %s", err)
+	}
+	return tx.gists().Put([]byte(g.ID), b)
+}
+
 // users retrieves the users bucket.
 func (tx *Tx) users() *bolt.Bucket { return tx.Bucket([]byte("users")) }
 

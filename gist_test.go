@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func init() {
@@ -49,4 +50,13 @@ func tempfile() string {
 	f.Close()
 	os.Remove(path)
 	return path
+}
+
+// parsetime parses an ISO8601 time string.
+func parsetime(s string) time.Time {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		log.Fatalf("invalid time: %s", err)
+	}
+	return t
 }

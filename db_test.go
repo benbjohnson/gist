@@ -14,6 +14,30 @@ func TestDB_Open(t *testing.T) {
 	ok(t, db.Close())
 }
 
+// Ensure that a gist can be persisted to the database.
+func TestTx_SaveGist(t *testing.T) {
+	db := NewTestDB()
+	defer db.Close()
+
+	data := &gist.Gist{
+		ID:       "xxx",
+		Username: "john",
+		CTime:    parsetime("2000-01-01T00:00:00Z"),
+		MTime:    parsetime("2010-01-01T00:00:00Z"),
+	}
+
+	ok(t, db.Update(func(tx *gist.Tx) error {
+		ok(t, tx.SaveGist(data))
+		return nil
+	}))
+
+	ok(t, db.View(func(tx *gist.Tx) error {
+		g, _ := tx.Gist("xxx")
+		equals(t, data, g)
+		return nil
+	}))
+}
+
 // Ensure that a user can be persisted to the database.
 func TestTx_SaveUser(t *testing.T) {
 	db := NewTestDB()
