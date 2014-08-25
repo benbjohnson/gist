@@ -1,6 +1,7 @@
 package gist
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/boltdb/bolt"
@@ -16,7 +17,7 @@ type DB struct {
 
 // Open opens and initializes the database.
 func (db *DB) Open(path string, mode os.FileMode) error {
-	d, err := bolt.Open(path, mode)
+	d, err := bolt.Open(path, mode, nil)
 	if err != nil {
 		return err
 	}
@@ -46,14 +47,14 @@ func (db *DB) Open(path string, mode os.FileMode) error {
 // View executes a function in the context of a read-only transaction.
 func (db *DB) View(fn func(*Tx) error) error {
 	return db.DB.View(func(tx *bolt.Tx) error {
-		return fn(&Tx{tx, db})
+		return fn(&Tx{tx})
 	})
 }
 
 // Update executes a function in the context of a writable transaction.
 func (db *DB) Update(fn func(*Tx) error) error {
 	return db.DB.Update(func(tx *bolt.Tx) error {
-		return fn(&Tx{tx, db})
+		return fn(&Tx{tx})
 	})
 }
 

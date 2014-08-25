@@ -4,9 +4,10 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/benbjohnson/gist"
-	"github.com/boltdb/bolt"
 )
 
 func main() {
@@ -28,19 +29,19 @@ func main() {
 	}
 
 	// Make sure the data directory exists.
-	if err := os.MkdirAll(*datadir); err != nil {
+	if err := os.MkdirAll(*datadir, 0700); err != nil {
 		log.Fatal(err)
 	}
 
 	// Open the database.
 	var db gist.DB
-	if err := db.Open(filepath.Join(*datadir, "db")); err != nil {
+	if err := db.Open(filepath.Join(*datadir, "db"), 0600); err != nil {
 		log.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
 
 	// Initialize the handler.
-	h := gist.Handler{
+	h := &gist.Handler{
 		DB:     &db,
 		Path:   *datadir,
 		Token:  *token,
