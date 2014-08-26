@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/gorilla/sessions"
 )
 
 // Gist represents a single GitHub gist.
@@ -21,18 +19,6 @@ type User struct {
 	ID          int    `json:"id"`
 	Username    string `json:"username"`
 	AccessToken string `json:"accessToken"`
-}
-
-// Session represents an authenticated session.
-type Session struct {
-	*sessions.Session
-	User  *User
-	Error error
-}
-
-// Authenticated returns true if there is a user attached to the session.
-func (s *Session) Authenticated() bool {
-	return s.User != nil
 }
 
 // assert will panic with a formatted message if the condition is false.

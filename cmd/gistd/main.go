@@ -18,6 +18,7 @@ func main() {
 		secret  = flag.String("secret", "", "api secret")
 	)
 	flag.Parse()
+	log.SetFlags(0)
 
 	// Validate flags.
 	if *datadir == "" {
@@ -41,13 +42,10 @@ func main() {
 	defer func() { _ = db.Close() }()
 
 	// Initialize the handler.
-	h := &gist.Handler{
-		DB:     &db,
-		Path:   *datadir,
-		Token:  *token,
-		Secret: *secret,
-	}
+	h := gist.NewHandler(&db, *datadir, *token, *secret)
 
 	// Start HTTP server.
+	log.Printf("Listening on http://localhost%s", *addr)
+	log.SetFlags(log.LstdFlags)
 	log.Fatal(http.ListenAndServe(*addr, h))
 }
