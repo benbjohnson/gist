@@ -35,7 +35,6 @@ func (c *gitHubClient) User(username string) (*User, error) {
 	u := &User{
 		ID:       *user.ID,
 		Username: *user.Login,
-		// TODO: AccessToken?
 	}
 	return u, nil
 }

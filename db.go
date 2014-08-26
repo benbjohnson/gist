@@ -88,8 +88,8 @@ func (tx *Tx) SaveGist(g *Gist) error {
 }
 
 // User retrieves an user from the database by ID.
-func (tx *Tx) User(id int64) (u *User, err error) {
-	if v := tx.users().Get(i64tob(id)); v != nil {
+func (tx *Tx) User(id int) (u *User, err error) {
+	if v := tx.users().Get(i64tob(int64(id))); v != nil {
 		err = json.Unmarshal(v, &u)
 	}
 	return

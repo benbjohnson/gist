@@ -3,7 +3,6 @@ TODO
 
 ## Uncompleted
 
-- [ ] Log in using GitHub
 - [ ] List gists for user
 - [ ] Download gist if stale
 - [ ] Update gist button
@@ -13,5 +12,7 @@ TODO
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
+
 ## Completed
 
+- [x] Log in using GitHub
