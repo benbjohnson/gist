@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"code.google.com/p/goauth2/oauth"
 	"github.com/gorilla/sessions"
 )
+
+// DefaultFilename is the default file used if none is specified in the URL.
+const DefaultFilename = "index.html"
 
 // Handler represents the root HTTP handler for the application.
 type Handler struct {
@@ -44,8 +48,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/_/authorized":
 		h.authorized(w, r)
 	default:
-		log.Println("not found:", r.URL.Path)
-		http.NotFound(w, r)
+		h.gist(w, r)
 	}
 }
 
@@ -84,7 +87,7 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write gists out.
-	(&tmpl{}).Gists(w, gists)
+	(&tmpl{}).Index(w, gists)
 }
 
 // authorize redirects the user to GitHub OAuth2 authorization.
@@ -150,6 +153,45 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect to home page.
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// gist serves a single file for a gist.
+// If the root is requested then the gist content is refreshed.
+func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
+	session := h.Session(r)
+
+	// Extract gist id and filepath.
+	var gistID, filename string
+	a := strings.Split(r.URL.Path, "/")
+	if len(a) == 0 || a[0] == "_" {
+		log.Println("not found:", r.URL.Path)
+		http.NotFound(w, r)
+		return
+	} else if len(a) == 1 {
+		gistID = a[0]
+	} else {
+		gistID = a[1]
+		filename = strings.Join(a[2:], "/")
+	}
+
+	// Set default filename.
+	if filename == "" {
+		filename = DefaultFilename
+	}
+
+	// TODO(benbjohnson): Check if we're loading the root file directly.
+	reload := (session.Authenticated() && filename == DefaultFilename)
+
+	// Update gist.
+	if reload {
+		if err := h.db.LoadGist(session.UserID(), gistID); err != nil {
+			log.Printf("reload gist: %s", err)
+			http.Error(w, "error loading gist", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// TODO(benbjohnson): Serve gist file from disk cache.
 }
 
 // Session represents an HTTP session.

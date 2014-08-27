@@ -59,6 +59,18 @@ func (db *DB) Secret() []byte {
 	return db.secret
 }
 
+// LoadGist retrieves the latest gist files from GitHub.
+func (db *DB) LoadGist(userID int, gistID string) error {
+	return db.Update(func(tx *Tx) error {
+		// TODO(benbjohnson): Retrieve user.
+		// TODO(benbjohnson): Create GitHub client.
+		// TODO(benbjohnson): Retrieve gist data.
+		// TODO(benbjohnson): If files are truncated then use HTTP.
+		// TODO(benbjohnson): Persist to disk (/_/#{gistID}).
+		return nil
+	})
+}
+
 // Tx represents an application-level transaction.
 type Tx struct {
 	*bolt.Tx

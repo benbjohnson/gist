@@ -1,4 +1,4 @@
-<%! func (_ *tmpl) Gists(w io.Writer, gists []*Gist) error %>
+<%! func (_ *tmpl) Index(w io.Writer, gists []*Gist) error %>
 
 <!DOCTYPE html>
 <html lang="en">

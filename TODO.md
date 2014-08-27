@@ -3,9 +3,7 @@ TODO
 
 ## Uncompleted
 
-- [ ] List gists for user
-- [ ] Download gist if stale
-- [ ] Update gist button
+- [ ] Download gist.
 - [ ] Deliver gist files over HTTP (with MIME types)
 - [ ] Domain name registration
 - [ ] Create DigitalOcean droplet
@@ -16,3 +14,4 @@ TODO
 ## Completed
 
 - [x] Log in using GitHub
+- [X] List gists for user

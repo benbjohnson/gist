@@ -4,7 +4,7 @@ import (
 "io"
 )
 //line index.ego:1
- func (_ *tmpl) Gists(w io.Writer, gists []*Gist) error  {
+ func (_ *tmpl) Index(w io.Writer, gists []*Gist) error  {
 //line index.ego:2
 if _, err := fmt.Fprintf(w, "\n\n"); err != nil { return err }
 //line index.ego:3

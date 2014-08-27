@@ -52,14 +52,31 @@ func (c *gitHubClient) Gists(username string) ([]*Gist, error) {
 	var gists []*Gist
 	for _, item := range a {
 		gist := &Gist{}
-		gist.deserializeGist(&item)
+		gist.deserializeGist(&item, false)
 		gists = append(gists, gist)
 	}
 
 	return gists, nil
 }
 
-func (g *Gist) deserializeGist(item *github.Gist) {
+// Gist returns a single gist by ID (with content).
+func (c *gitHubClient) Gist(id string) (*Gist, error) {
+	// Retrieve gist from GitHub.
+	item, _, err := c.Client.Gists.Get(id)
+	if err != nil {
+		return nil, fmt.Errorf("get gist: %s", err)
+	}
+
+	// Convert to our application type.
+	gist := &Gist{}
+	gist.deserializeGist(item, true)
+
+	// TODO(benbjohnson): Retrieve truncated files.
+
+	return gist, nil
+}
+
+func (g *Gist) deserializeGist(item *github.Gist, useContent bool) {
 	g.ID = *item.ID
 	g.Owner = *item.Owner.Login
 	g.Description = *item.Description
@@ -73,7 +90,7 @@ func (g *Gist) deserializeGist(item *github.Gist) {
 			RawURL:   *file.RawURL,
 		}
 
-		if file.Content != nil {
+		if useContent && file.Content != nil {
 			f.Content = []byte(*file.Content)
 		}
 
