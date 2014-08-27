@@ -1,0 +1,25 @@
+<%! func (_ *tmpl) Gists(w io.Writer, gists []*Gist) error %>
+
+<!DOCTYPE html>
+<html lang="en">
+  <body>
+    <h1>Gist Exposed!</h1>
+
+    <h2>Recent Gists</h2>
+
+    <ol>
+      <% for _, g := range gists { %>
+        <li>
+          <a href="/<%=g.Owner%>/<%=g.ID%>">
+            <% if g.Description != "" { %>
+              <%= g.Description %>
+            <% } else { %>
+              <em>Untitled</em>
+            <% } %>
+          </a>
+        </li>
+      <% } %>
+    </ol>
+
+  </body>
+</html>

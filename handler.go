@@ -2,7 +2,6 @@ package gist
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -75,11 +74,17 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	// TODO(benbjohnson): Show a list of hosted gists.
-	// TODO(benbjohnson): Show a list of available gists.
+	// Retrieve available gists from GitHub.
+	client := NewGitHubClient(user.AccessToken)
+	gists, err := client.Gists("")
+	if err != nil {
+		log.Println("github gists:", err)
+		http.Error(w, "github api error", http.StatusInternalServerError)
+		return
+	}
 
-	// TEMP: Print out user data.
-	json.NewEncoder(w).Encode(user)
+	// Write gists out.
+	(&tmpl{}).Gists(w, gists)
 }
 
 // authorize redirects the user to GitHub OAuth2 authorization.
@@ -162,3 +167,6 @@ func (s *Session) UserID() int {
 	id, _ := s.Values["UserID"].(int)
 	return id
 }
+
+// tmpl is a namespace for templates
+type tmpl struct{}

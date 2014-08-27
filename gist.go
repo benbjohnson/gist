@@ -3,15 +3,24 @@ package gist
 import (
 	"fmt"
 	"os"
-	"time"
 )
 
 // Gist represents a single GitHub gist.
 type Gist struct {
-	ID       string    `json:"id"`
-	Username string    `json:"username"`
-	CTime    time.Time `json:"ctime,omitempty"`
-	MTime    time.Time `json:"mtime,omitempty"`
+	ID          string      `json:"id"`
+	Owner       string      `json:"owner"`
+	Description string      `json:"description"`
+	Public      bool        `json:"public"`
+	URL         string      `json:"url"`
+	Files       []*GistFile `json:"files"`
+}
+
+// GistFile represents an individual file within a gist.
+type GistFile struct {
+	Size     int    `json:"size"`
+	Filename string `json:"filename"`
+	RawURL   string `json:"rawURL"`
+	Content  []byte `json:"-"`
 }
 
 // User represents a GitHub authorized user on the system.
