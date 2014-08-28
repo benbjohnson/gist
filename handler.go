@@ -3,8 +3,10 @@ package gist
 import (
 	"crypto/rand"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"code.google.com/p/goauth2/oauth"
@@ -47,6 +49,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.authorize(w, r)
 	case "/_/authorized":
 		h.authorized(w, r)
+	case "favicon.ico":
+		http.NotFound(w, r)
 	default:
 		h.gist(w, r)
 	}
@@ -160,19 +164,23 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 	session := h.Session(r)
 
-	// Extract gist id and filepath.
-	var gistID, filename string
+	// Break up URL path components.
+	// If there are less than 3 components, return 404.
+	// If we have 3 components, redirect to append a slash.
 	a := strings.Split(r.URL.Path, "/")
-	if len(a) == 0 || a[0] == "_" {
+	if len(a) < 3 || a[0] == "_" {
 		log.Println("not found:", r.URL.Path)
 		http.NotFound(w, r)
 		return
-	} else if len(a) == 1 {
-		gistID = a[0]
-	} else {
-		gistID = a[1]
-		filename = strings.Join(a[2:], "/")
+	} else if len(a) == 3 {
+		u := r.URL
+		u.Path += "/"
+		http.Redirect(w, r, u.String(), http.StatusFound)
+		return
 	}
+
+	// Extract the values from the URL.
+	gistID, filename := a[2], strings.Join(a[3:], "/")
 
 	// Set default filename.
 	if filename == "" {
@@ -191,7 +199,18 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO(benbjohnson): Serve gist file from disk cache.
+	// Serve gist file from disk cache.
+	path := h.db.GistFilePath(gistID, filename)
+	f, err := os.Open(path)
+	if err != nil {
+		log.Printf("read gist: %s: %s", path, err)
+		http.NotFound(w, r)
+		return
+	}
+	defer func() { _ = f.Close() }()
+
+	// Copy the file to the response.
+	_, _ = io.Copy(w, f)
 }
 
 // Session represents an HTTP session.

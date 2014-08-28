@@ -11,6 +11,7 @@ import (
 type GitHubClient interface {
 	User(username string) (*User, error)
 	Gists(username string) ([]*Gist, error)
+	Gist(id string) (*Gist, error)
 }
 
 // NewGitHubClient returns an instance of GitHubClient using a given access token.
@@ -70,9 +71,6 @@ func (c *gitHubClient) Gist(id string) (*Gist, error) {
 	// Convert to our application type.
 	gist := &Gist{}
 	gist.deserializeGist(item, true)
-
-	// TODO(benbjohnson): Retrieve truncated files.
-
 	return gist, nil
 }
 
@@ -84,16 +82,10 @@ func (g *Gist) deserializeGist(item *github.Gist, useContent bool) {
 	g.URL = *item.HTMLURL
 
 	for _, file := range item.Files {
-		f := &GistFile{
+		g.Files = append(g.Files, &GistFile{
 			Size:     *file.Size,
 			Filename: *file.Filename,
 			RawURL:   *file.RawURL,
-		}
-
-		if useContent && file.Content != nil {
-			f.Content = []byte(*file.Content)
-		}
-
-		g.Files = append(g.Files, f)
+		})
 	}
 }

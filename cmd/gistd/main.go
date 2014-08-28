@@ -36,6 +36,7 @@ func main() {
 
 	// Open the database.
 	var db gist.DB
+	db.GistPath = filepath.Join(*datadir, "gists")
 	if err := db.Open(filepath.Join(*datadir, "db"), 0600); err != nil {
 		log.Fatal(err)
 	}

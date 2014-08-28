@@ -5,7 +5,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/boltdb/bolt"
 )
@@ -14,6 +17,9 @@ import (
 type DB struct {
 	*bolt.DB
 	secret []byte
+
+	// GistPath to the root of the gist data.
+	GistPath string
 }
 
 // Open opens and initializes the database.
@@ -62,13 +68,39 @@ func (db *DB) Secret() []byte {
 // LoadGist retrieves the latest gist files from GitHub.
 func (db *DB) LoadGist(userID int, gistID string) error {
 	return db.Update(func(tx *Tx) error {
-		// TODO(benbjohnson): Retrieve user.
-		// TODO(benbjohnson): Create GitHub client.
-		// TODO(benbjohnson): Retrieve gist data.
-		// TODO(benbjohnson): If files are truncated then use HTTP.
-		// TODO(benbjohnson): Persist to disk (/_/#{gistID}).
+		// Retrieve user.
+		u, err := tx.User(userID)
+		if err != nil {
+			return fmt.Errorf("user: %s", err)
+		} else if u == nil {
+			return fmt.Errorf("user not found: %d", userID)
+		}
+
+		// Create GitHub client.
+		client := NewGitHubClient(u.AccessToken)
+
+		// Retrieve gist data.
+		gist, err := client.Gist(gistID)
+		if err != nil {
+			return fmt.Errorf("gist: %s", err)
+		} else if gist == nil {
+			return fmt.Errorf("gist not found: %s", gistID)
+		}
+
+		// Download all files over HTTP.
+		for _, file := range gist.Files {
+			if err := download(file.RawURL, db.GistFilePath(gistID, file.Filename)); err != nil {
+				return fmt.Errorf("download: %s", err)
+			}
+		}
+
 		return nil
 	})
+}
+
+// GistFilePath returns the path for a given gist file.
+func (db *DB) GistFilePath(gistID, filename string) string {
+	return filepath.Join(db.GistPath, gistID, filename)
 }
 
 // Tx represents an application-level transaction.
@@ -136,6 +168,42 @@ func (tx *Tx) GenerateSecretIfNotExists() error {
 		return err
 	}
 	return tx.meta().Put([]byte("secret"), value)
+}
+
+// download retrieves a URL over HTTP GET and writes the response to the path.
+func download(url, path string) error {
+	// Create the parent directory.
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+
+	// Retrieve the file over HTTP.
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("get: %s", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// Check the response code.
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid HTTP status: %d", resp.StatusCode)
+	}
+
+	// Open the file to write to.
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create: %s", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	// Copy from the response to the file.
+	// Note: This is not perfect as a partial file can be read but this is
+	// not the record of authority so we can always retry if there's a problem.
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Converts an integer to a big-endian encoded byte slice.
