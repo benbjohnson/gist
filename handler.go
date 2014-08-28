@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"code.google.com/p/goauth2/oauth"
@@ -187,8 +189,13 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 		filename = DefaultFilename
 	}
 
-	// TODO(benbjohnson): Check if we're loading the root file directly.
-	reload := (session.Authenticated() && filename == DefaultFilename)
+	// Only reload if the following conditions are met:
+	//
+	//   1. User is logged in.
+	//   2. User is loading / or /index.html.
+	//   3. User is loading page directly (i.e. not in an iframe).
+	//
+	reload := (session.Authenticated() && filename == DefaultFilename && r.Referer() == "")
 
 	// Update gist.
 	if reload {
@@ -208,6 +215,9 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = f.Close() }()
+
+	// Set the content type.
+	w.Header().Set("Content-Type", mime.TypeByExtension(filepath.Ext(filename)))
 
 	// Copy the file to the response.
 	_, _ = io.Copy(w, f)

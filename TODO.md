@@ -16,3 +16,4 @@ TODO
 - [x] Log in using GitHub (1h)
 - [x] List gists for user (1h)
 - [x] Download gist.
+- [x] Parallelize gist download.
