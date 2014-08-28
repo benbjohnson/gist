@@ -88,9 +88,21 @@ func (db *DB) LoadGist(userID int, gistID string) error {
 		}
 
 		// Download all files over HTTP.
+		ch := make(chan error)
 		for _, file := range gist.Files {
-			if err := download(file.RawURL, db.GistFilePath(gistID, file.Filename)); err != nil {
-				return fmt.Errorf("download: %s", err)
+			go func() {
+				var err error
+				if err = download(file.RawURL, db.GistFilePath(gistID, file.Filename)); err != nil {
+					err = fmt.Errorf("download: %s: %s", file.RawURL, err)
+				}
+				ch <- err
+			}()
+		}
+
+		// Check for download errors.
+		for i := 0; i < len(gist.Files); i++ {
+			if err := <-ch; err != nil {
+				return err
 			}
 		}
 
