@@ -91,6 +91,7 @@ func (db *DB) LoadGist(userID int, gistID string) error {
 		ch := make(chan error)
 		for _, file := range gist.Files {
 			go func() {
+				defer autonotify()
 				var err error
 				if err = download(file.RawURL, db.GistFilePath(gistID, file.Filename)); err != nil {
 					err = fmt.Errorf("download: %s: %s", file.RawURL, err)

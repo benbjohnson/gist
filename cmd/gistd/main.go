@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/benbjohnson/gist"
+	"github.com/bugsnag/bugsnag-go"
 )
 
 func main() {
@@ -18,9 +19,17 @@ func main() {
 		secret  = flag.String("secret", "", "api secret")
 		cert    = flag.String("cert", "", "SSL certificate file")
 		key     = flag.String("key", "", "SSL key file")
+		bskey   = flag.String("bugsnag", "", "bugsnag key")
 	)
 	flag.Parse()
 	log.SetFlags(0)
+
+	// Setup bugsnag error handling.
+	if *bskey != "" {
+
+		bugsnag.Configure(bugsnag.Configuration{APIKey: *bskey})
+		defer bugsnag.AutoNotify()
+	}
 
 	// Validate flags.
 	if *datadir == "" {
@@ -53,9 +62,9 @@ func main() {
 
 	// Start HTTP server.
 	if *cert != "" && *key != "" {
-		go func() { log.Fatal(http.ListenAndServeTLS(":443", *cert, *key, h)) }()
+		go func() { log.Fatal(http.ListenAndServeTLS(":443", *cert, *key, bugsnag.Handler(h))) }()
 	}
-	go func() { log.Fatal(http.ListenAndServe(*addr, h)) }()
+	go func() { log.Fatal(http.ListenAndServe(*addr, bugsnag.Handler(h))) }()
 
 	log.Printf("Listening on http://localhost%s", *addr)
 	log.SetFlags(log.LstdFlags)

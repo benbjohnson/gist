@@ -3,6 +3,8 @@ package gist
 import (
 	"fmt"
 	"os"
+
+	"github.com/bugsnag/bugsnag-go"
 )
 
 // Gist represents a single GitHub gist.
@@ -28,6 +30,11 @@ type User struct {
 	ID          int    `json:"id"`
 	Username    string `json:"username"`
 	AccessToken string `json:"accessToken"`
+}
+
+// autonotify automatically notifies bugsnag of panics.
+func autonotify() {
+	bugsnag.AutoNotify()
 }
 
 // assert will panic with a formatted message if the condition is false.

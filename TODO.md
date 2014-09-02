@@ -3,9 +3,11 @@ TODO
 
 ## Uncompleted
 
-- [ ] Make UI prettier.
-- [ ] Domain name registration
-- [ ] Create DigitalOcean droplet
+- [ ] UI
+  - [ ] Root (unauthenticated)
+  - [ ] Root (authenticated)
+- [ ] Unit Tests
+  - [ ] MockGitHubClient
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
@@ -18,4 +20,7 @@ TODO
 - [x] Parallelize gist download.
 - [x] Deliver gist files over HTTP (with MIME types)
 - [x] Implement oEmbed (http://oembed.com/)
-- [X] Add TLS support.
+- [x] Add TLS support.
+- [x] Domain name registration
+- [x] Create DigitalOcean droplet
+- [x] Bugsnag
