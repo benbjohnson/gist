@@ -2,21 +2,39 @@ package gist
 
 import (
 	"crypto/rand"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"code.google.com/p/goauth2/oauth"
 	"github.com/gorilla/sessions"
 )
 
-// DefaultFilename is the default file used if none is specified in the URL.
-const DefaultFilename = "index.html"
+// errNonCanonicalPath is returned when a URL needs a slash at the end.
+var errNonCanonicalPath = errors.New("non-canonical path")
+
+const (
+	// DefaultFilename is the default file used if none is specified in the URL.
+	DefaultFilename = "index.html"
+
+	// DefaultEmbedWidth is the width returned from the oEmbed endpoint.
+	DefaultEmbedWidth = 600
+
+	// DefaultEmbedHeight is the height returned from the oEmbed endpoint.
+	DefaultEmbedHeight = 300
+
+	// EmbedCacheAge is the number of seconds a consumer should cache an oEmbed.
+	EmbedCacheAge = 0
+)
 
 // Handler represents the root HTTP handler for the application.
 type Handler struct {
@@ -51,6 +69,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.authorize(w, r)
 	case "/_/authorized":
 		h.authorized(w, r)
+	case "/oembed", "/oembed/":
+		h.oembed(w, r)
+	case "/oembed.json":
+		h.oembedJSON(w, r)
+	case "/oembed.xml":
+		h.oembedXML(w, r)
 	case "favicon.ico":
 		http.NotFound(w, r)
 	default:
@@ -161,28 +185,120 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
+// oembed provides an oEmbed endpoint.
+func (h *Handler) oembed(w http.ResponseWriter, r *http.Request) {
+	switch r.FormValue("format") {
+	case "json":
+		h.oembedJSON(w, r)
+	case "xml":
+		h.oembedXML(w, r)
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+	}
+}
+
+// oembed provides an oEmbed endpoint.
+func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Version      string `json:"version"`
+		Type         string `json:"type"`
+		HTML         string `json:"html"`
+		Width        int    `json:"width"`
+		Height       int    `json:"height"`
+		Title        string `json:"title"`
+		CacheAge     int    `json:"cache_age"`
+		AuthorName   string `json:"author_name"`
+		AuthorURL    string `json:"author_url"`
+		ProviderName string `json:"provider_name"`
+		ProviderURL  string `json:"provider_url"`
+	}
+
+	// Retrieve URL parameter and parse.
+	u, err := url.Parse(r.FormValue("url"))
+	if err != nil {
+		log.Printf("oembed: %s", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	q := u.Query()
+
+	// Retrieve width & height.
+	width, height := DefaultEmbedWidth, DefaultEmbedHeight
+	if v, _ := strconv.Atoi(q.Get("width")); v > 0 {
+		width = v
+	}
+	if v, _ := strconv.Atoi(q.Get("height")); v > 0 {
+		height = v
+	}
+
+	// Extract gist id.
+	gistID, _, err := ParsePath(u.Path)
+	if err == errNonCanonicalPath {
+		u.Path += "/"
+	} else if err != nil {
+		log.Printf("oembed: parse path: %s", err)
+		http.NotFound(w, r)
+	}
+
+	// Retrieve gist.
+	var gist *Gist
+	err = h.db.View(func(tx *Tx) (err error) {
+		gist, err = tx.Gist(gistID)
+		return nil
+	})
+	if err != nil {
+		log.Printf("oembed: %s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	} else if gist == nil {
+		log.Printf("oembed: not found: %s", gistID)
+		http.NotFound(w, r)
+		return
+	}
+
+	// Construct an oEmbed response.
+	resp := &response{
+		Version:      "1.0",
+		Type:         "rich",
+		Width:        width,
+		Height:       height,
+		Title:        gist.Description,
+		CacheAge:     EmbedCacheAge,
+		AuthorName:   gist.Owner,
+		AuthorURL:    (&url.URL{Scheme: "https", Host: "github.com", Path: "/" + gist.Owner}).String(),
+		ProviderName: "Gist Exposed!",
+		ProviderURL:  "https://gist.exposed",
+	}
+
+	// Write out the JSON-encoded response.
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Println("json:", err)
+	}
+}
+
+// oembedXML provides an oEmbed XML endpoint.
+func (h *Handler) oembedXML(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // gist serves a single file for a gist.
 // If the root is requested then the gist content is refreshed.
 func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 	session := h.Session(r)
 
-	// Break up URL path components.
-	// If there are less than 3 components, return 404.
-	// If we have 3 components, redirect to append a slash.
-	a := strings.Split(r.URL.Path, "/")
-	if len(a) < 3 || a[0] == "_" {
-		log.Println("not found:", r.URL.Path)
-		http.NotFound(w, r)
-		return
-	} else if len(a) == 3 {
+	// Extract the path variables.
+	gistID, filename, err := ParsePath(r.URL.Path)
+	if err == errNonCanonicalPath {
 		u := r.URL
 		u.Path += "/"
 		http.Redirect(w, r, u.String(), http.StatusFound)
 		return
+	} else if err != nil {
+		log.Println("parse path:", err)
+		http.NotFound(w, r)
+		return
 	}
-
-	// Extract the values from the URL.
-	gistID, filename := a[2], strings.Join(a[3:], "/")
 
 	// Set default filename.
 	if filename == "" {
@@ -221,6 +337,25 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 
 	// Copy the file to the response.
 	_, _ = io.Copy(w, f)
+}
+
+// ParsePath extracts the gist id and filename from the path.
+func ParsePath(s string) (gistID, filename string, err error) {
+	// Break apart path into components.
+	// A path is invalid if we have less than 3 components or it's a reserved path.
+	// If we have exactly 3 components, it's non-canonical and should be redirected.
+	a := strings.Split(s, "/")
+	if len(a) < 3 || a[0] == "_" {
+		err = fmt.Errorf("invalid path: %s", s)
+		return
+	} else if len(a) == 3 {
+		err = errNonCanonicalPath
+		return
+	}
+
+	// Extract the values from the URL.
+	gistID, filename = a[2], strings.Join(a[3:], "/")
+	return
 }
 
 // Session represents an HTTP session.

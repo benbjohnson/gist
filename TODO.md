@@ -3,8 +3,7 @@ TODO
 
 ## Uncompleted
 
-- [ ] Deliver gist files over HTTP (with MIME types)
-- [ ] Implement oEmbed (http://oembed.com/)
+- [ ] Make UI prettier.
 - [ ] Domain name registration
 - [ ] Create DigitalOcean droplet
 - [ ] Embed.ly integration
@@ -17,3 +16,6 @@ TODO
 - [x] List gists for user (1h)
 - [x] Download gist.
 - [x] Parallelize gist download.
+- [x] Deliver gist files over HTTP (with MIME types)
+- [x] Implement oEmbed (http://oembed.com/)
+
