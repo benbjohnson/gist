@@ -8,6 +8,8 @@ TODO
   - [ ] Root (authenticated)
 - [ ] Unit Tests
   - [ ] MockGitHubClient
+- [ ] Log management (Papertrail?)
+- [ ] Metrics (Datadog)
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
@@ -23,4 +25,6 @@ TODO
 - [x] Add TLS support.
 - [x] Domain name registration
 - [x] Create DigitalOcean droplet
-- [x] Bugsnag
+- [x] Error reporting (Bugsnag)
+- [x] CI (Drone)
+- [x] Test Coverage (Coveralls)

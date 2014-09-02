@@ -1,8 +1,7 @@
 gist [![Build Status](https://drone.io/github.com/benbjohnson/gist/status.png)](https://drone.io/github.com/benbjohnson/gist/latest) [![Coverage Status](https://coveralls.io/repos/benbjohnson/gist/badge.png?branch=master)](https://coveralls.io/r/benbjohnson/gist?branch=master) [![GoDoc](https://godoc.org/github.com/benbjohnson/gist?status.png)](https://godoc.org/github.com/benbjohnson/gist) ![Project status](http://img.shields.io/status/experimental.png?color=red)
 ====
 
-This project is a mirror for hosting GitHub gist repositories. It's used as
-the server for [http://gist.exposed](http://gist.exposed).
+This project is a mirror for hosting GitHub gist repositories.
 
 
 ## Getting Started
