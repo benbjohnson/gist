@@ -22,7 +22,6 @@ type GistFile struct {
 	Size     int    `json:"size"`
 	Filename string `json:"filename"`
 	RawURL   string `json:"rawURL"`
-	Content  []byte `json:"-"`
 }
 
 // User represents a GitHub authorized user on the system.

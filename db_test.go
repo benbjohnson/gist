@@ -20,10 +20,14 @@ func TestTx_SaveGist(t *testing.T) {
 	defer db.Close()
 
 	data := &gist.Gist{
-		ID:       "xxx",
-		Username: "john",
-		CTime:    parsetime("2000-01-01T00:00:00Z"),
-		MTime:    parsetime("2010-01-01T00:00:00Z"),
+		ID:          "xxx",
+		Owner:       "john",
+		Description: "My gist",
+		Public:      true,
+		URL:         "http://gist.github.com/john/xxx",
+		Files: []*gist.GistFile{
+			{Size: 100, Filename: "index.html", RawURL: "http://raw.github.com/john/xxx/index.html"},
+		},
 	}
 
 	ok(t, db.Update(func(tx *gist.Tx) error {
