@@ -18,4 +18,4 @@ TODO
 - [x] Parallelize gist download.
 - [x] Deliver gist files over HTTP (with MIME types)
 - [x] Implement oEmbed (http://oembed.com/)
-
+- [X] Add TLS support.

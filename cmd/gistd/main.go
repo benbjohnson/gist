@@ -16,6 +16,8 @@ func main() {
 		addr    = flag.String("addr", ":40000", "bind address")
 		token   = flag.String("token", "", "api token")
 		secret  = flag.String("secret", "", "api secret")
+		cert    = flag.String("cert", "", "SSL certificate file")
+		key     = flag.String("key", "", "SSL key file")
 	)
 	flag.Parse()
 	log.SetFlags(0)
@@ -27,6 +29,10 @@ func main() {
 		log.Fatal("GitHub API token required: -token TOKEN")
 	} else if *secret == "" {
 		log.Fatal("GitHub API secret required: -secret SECRET")
+	} else if *cert != "" && *key == "" {
+		log.Fatal("key file required: -key PATH")
+	} else if *key != "" && *cert == "" {
+		log.Fatal("certificate file required: -cert PATH")
 	}
 
 	// Make sure the data directory exists.
@@ -46,7 +52,13 @@ func main() {
 	h := gist.NewHandler(&db, *datadir, *token, *secret)
 
 	// Start HTTP server.
+	if *cert != "" && *key != "" {
+		go func() { log.Fatal(http.ListenAndServeTLS(":443", *cert, *key, h)) }()
+	}
+	go func() { log.Fatal(http.ListenAndServe(*addr, h)) }()
+
 	log.Printf("Listening on http://localhost%s", *addr)
 	log.SetFlags(log.LstdFlags)
-	log.Fatal(http.ListenAndServe(*addr, h))
+
+	<-(chan struct{})(nil)
 }
