@@ -90,14 +90,14 @@ func (db *DB) LoadGist(userID int, gistID string) error {
 		// Download all files over HTTP.
 		ch := make(chan error)
 		for _, file := range gist.Files {
-			go func() {
+			go func(file *GistFile) {
 				defer autonotify()
 				var err error
 				if err = download(file.RawURL, db.GistFilePath(gistID, file.Filename)); err != nil {
 					err = fmt.Errorf("download: %s: %s", file.RawURL, err)
 				}
 				ch <- err
-			}()
+			}(file)
 		}
 
 		// Check for download errors.
