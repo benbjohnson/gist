@@ -117,7 +117,7 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write gists out.
-	(&tmpl{}).Index(w, gists)
+	_ = (&tmpl{}).Index(w, gists)
 }
 
 // authorize redirects the user to GitHub OAuth2 authorization.
@@ -130,7 +130,7 @@ func (h *Handler) authorize(w http.ResponseWriter, r *http.Request) {
 	// Save state to session.
 	session := h.Session(r)
 	session.Values["AuthState"] = state
-	session.Save(r, w)
+	_ = session.Save(r, w)
 
 	// Redirect user to GitHub for OAuth authorization.
 	http.Redirect(w, r, h.config.AuthCodeURL(state), http.StatusFound)
@@ -179,7 +179,7 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 
 	// Save user id to the session.
 	session.Values["UserID"] = user.ID
-	session.Save(r, w)
+	_ = session.Save(r, w)
 
 	// Redirect to home page.
 	http.Redirect(w, r, "/", http.StatusFound)
