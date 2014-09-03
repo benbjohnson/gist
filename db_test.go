@@ -14,6 +14,13 @@ func TestDB_Open(t *testing.T) {
 	ok(t, db.Close())
 }
 
+// Ensure that a database will generate a 64-byte secret and save it to the DB.
+func TestDB_Secret(t *testing.T) {
+	db := NewTestDB()
+	defer db.Close()
+	equals(t, 64, len(db.Secret()))
+}
+
 // Ensure that a gist can be persisted to the database.
 func TestTx_SaveGist(t *testing.T) {
 	db := NewTestDB()

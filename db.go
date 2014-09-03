@@ -20,6 +20,9 @@ type DB struct {
 
 	// GistPath to the root of the gist data.
 	GistPath string
+
+	// NewGitHubClient is the function used to return a new github client.
+	NewGitHubClient func(string) GitHubClient
 }
 
 // Open opens and initializes the database.
@@ -77,7 +80,10 @@ func (db *DB) LoadGist(userID int, gistID string) error {
 		}
 
 		// Create GitHub client.
-		client := NewGitHubClient(u.AccessToken)
+		if db.NewGitHubClient == nil {
+			db.NewGitHubClient = NewGitHubClient
+		}
+		client := db.NewGitHubClient(u.AccessToken)
 
 		// Retrieve gist data.
 		gist, err := client.Gist(gistID)

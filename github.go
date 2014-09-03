@@ -2,6 +2,7 @@ package gist
 
 import (
 	"fmt"
+	"net/url"
 
 	"code.google.com/p/goauth2/oauth"
 	"github.com/google/go-github/github"
@@ -9,6 +10,7 @@ import (
 
 // GitHubClient is an interface for abstracting the GitHub API.
 type GitHubClient interface {
+	SetBaseURL(u string)
 	User(username string) (*User, error)
 	Gists(username string) ([]*Gist, error)
 	Gist(id string) (*Gist, error)
@@ -25,18 +27,24 @@ type gitHubClient struct {
 	*github.Client
 }
 
+// SetBaseURL sets the base URL for testing.
+func (c *gitHubClient) SetBaseURL(rawurl string) { c.BaseURL, _ = url.Parse(rawurl) }
+
 // User returns a user by username.
 func (c *gitHubClient) User(username string) (*User, error) {
 	// Retrieve user from GitHub.
-	user, _, err := c.Users.Get("")
+	user, _, err := c.Users.Get(username)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %s", err)
 	}
 
 	// Convert to our application type.
-	u := &User{
-		ID:       *user.ID,
-		Username: *user.Login,
+	u := &User{}
+	if user.ID != nil {
+		u.ID = *user.ID
+	}
+	if user.Login != nil {
+		u.Username = *user.Login
 	}
 	return u, nil
 }

@@ -43,6 +43,8 @@ type Handler struct {
 	path   string
 	config *oauth.Config
 	store  sessions.Store
+
+	NewGitHubClient func(string) GitHubClient
 }
 
 // NewHandler returns a new instance of Handler.
@@ -58,6 +60,7 @@ func NewHandler(db *DB, path, token, secret string) *Handler {
 			AuthURL:      "https://github.com/login/oauth/authorize",
 			TokenURL:     "https://github.com/login/oauth/access_token",
 		},
+		NewGitHubClient: NewGitHubClient,
 	}
 }
 
@@ -125,7 +128,7 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve available gists from GitHub.
-	client := NewGitHubClient(user.AccessToken)
+	client := h.NewGitHubClient(user.AccessToken)
 	gists, err := client.Gists("")
 	if err != nil {
 		log.Println("github gists:", err)
