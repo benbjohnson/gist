@@ -40,20 +40,17 @@ const (
 // Handler represents the root HTTP handler for the application.
 type Handler struct {
 	db     *DB
-	path   string
 	config *oauth.Config
-	store  sessions.Store
+	Store  sessions.Store
 
 	// NewGitHubClient returns a new GitHub client.
 	NewGitHubClient func(string) GitHubClient
 }
 
 // NewHandler returns a new instance of Handler.
-func NewHandler(db *DB, path, token, secret string) *Handler {
+func NewHandler(db *DB, token, secret string) *Handler {
 	return &Handler{
-		db:    db,
-		path:  path,
-		store: sessions.NewCookieStore(db.secret),
+		db: db,
 		config: &oauth.Config{
 			ClientId:     token,
 			ClientSecret: secret,
@@ -61,9 +58,13 @@ func NewHandler(db *DB, path, token, secret string) *Handler {
 			AuthURL:      "https://github.com/login/oauth/authorize",
 			TokenURL:     "https://github.com/login/oauth/access_token",
 		},
+		Store:           sessions.NewCookieStore(db.secret),
 		NewGitHubClient: NewGitHubClient,
 	}
 }
+
+// DB returns the database reference.
+func (h *Handler) DB() *DB { return h.db }
 
 // ServeHTTP dispatches incoming HTTP requests.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +106,7 @@ func (h *Handler) log(r *http.Request, t *time.Time) {
 
 // Session returns the current session.
 func (h *Handler) Session(r *http.Request) *Session {
-	s, _ := h.store.Get(r, "default")
+	s, _ := h.Store.Get(r, "default")
 	return &Session{s}
 }
 

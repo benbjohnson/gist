@@ -58,7 +58,7 @@ func main() {
 	defer func() { _ = db.Close() }()
 
 	// Initialize the handler.
-	h := gist.NewHandler(&db, *datadir, *token, *secret)
+	h := gist.NewHandler(&db, *token, *secret)
 
 	// Start HTTP server.
 	if *cert != "" && *key != "" {
