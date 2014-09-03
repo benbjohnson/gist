@@ -31,11 +31,6 @@ type User struct {
 	AccessToken string `json:"accessToken"`
 }
 
-// autonotify automatically notifies bugsnag of panics.
-func autonotify() {
-	bugsnag.AutoNotify()
-}
-
 // assert will panic with a formatted message if the condition is false.
 func assert(condition bool, msg string, v ...interface{}) {
 	if !condition {
@@ -43,10 +38,8 @@ func assert(condition bool, msg string, v ...interface{}) {
 	}
 }
 
-func warn(v ...interface{}) {
-	fmt.Fprintln(os.Stderr, v...)
-}
+// autonotify automatically notifies bugsnag of panics.
+func autonotify() { bugsnag.AutoNotify() }
 
-func warnf(msg string, v ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+"\n", v...)
-}
+func warn(v ...interface{})              { fmt.Fprintln(os.Stderr, v...) }
+func warnf(msg string, v ...interface{}) { fmt.Fprintf(os.Stderr, msg+"\n", v...) }

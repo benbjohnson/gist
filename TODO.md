@@ -5,7 +5,7 @@ TODO
 
 - [ ] Unit Tests
   - [x] MockGitHubClient
-  - [ ] GitHub tests
+  - [x] GitHub tests
   - [ ] Handler tests
   - [ ] DB tests
 - [ ] UI
