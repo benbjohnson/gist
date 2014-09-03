@@ -44,6 +44,7 @@ type Handler struct {
 	config *oauth.Config
 	store  sessions.Store
 
+	// NewGitHubClient returns a new GitHub client.
 	NewGitHubClient func(string) GitHubClient
 }
 
@@ -328,10 +329,10 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 	// Only reload if the following conditions are met:
 	//
 	//   1. User is logged in.
-	//   2. User is loading / or /index.html.
+	//   2. User is loading an HTML page.
 	//   3. User is loading page directly (i.e. not in an iframe).
 	//
-	reload := (session.Authenticated() && filename == DefaultFilename && r.Referer() == "")
+	reload := (session.Authenticated() && filepath.Ext(filename) == ".html" && r.Referer() == "")
 
 	// Update gist.
 	if reload {

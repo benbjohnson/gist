@@ -3,13 +3,15 @@ TODO
 
 ## Uncompleted
 
+- [ ] Unit Tests
+  - [x] MockGitHubClient
+  - [ ] GitHub tests
+  - [ ] Handler tests
+  - [ ] DB tests
 - [ ] UI
   - [ ] Root (unauthenticated)
   - [ ] Root (authenticated)
-- [ ] Reload if accessing any .html
 - [ ] Rate limit reloads (1 per sec?)
-- [ ] Unit Tests
-  - [ ] MockGitHubClient
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
@@ -37,3 +39,4 @@ TODO
 - [x] Upstart service
 - [x] Log management (Papertrail)
 - [x] Metrics (Datadog)
+- [x] Reload if accessing any .html
