@@ -6,12 +6,17 @@ TODO
 - [ ] UI
   - [ ] Root (unauthenticated)
   - [ ] Root (authenticated)
+- [ ] Reload if accessing any .html
+- [ ] Rate limit reloads (1 per sec?)
 - [ ] Unit Tests
   - [ ] MockGitHubClient
-- [ ] Log management (Papertrail?)
-- [ ] Metrics (Datadog)
 - [ ] Embed.ly integration
 - [ ] Test on Medium
+
+
+## Future
+
+- [ ] Group gists together (by tag?, by folder?)
 
 
 ## Completed
@@ -28,3 +33,7 @@ TODO
 - [x] Error reporting (Bugsnag)
 - [x] CI (Drone)
 - [x] Test Coverage (Coveralls)
+- [x] Continuous Deployment (Drone)
+- [x] Upstart service
+- [x] Log management (Papertrail)
+- [x] Metrics (Datadog)

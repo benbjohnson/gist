@@ -75,17 +75,33 @@ func (c *gitHubClient) Gist(id string) (*Gist, error) {
 }
 
 func (g *Gist) deserializeGist(item *github.Gist, useContent bool) {
-	g.ID = *item.ID
-	g.Owner = *item.Owner.Login
-	g.Description = *item.Description
-	g.Public = *item.Public
-	g.URL = *item.HTMLURL
+	if item.ID != nil {
+		g.ID = *item.ID
+	}
+	if item.Owner != nil && item.Owner.Login != nil {
+		g.Owner = *item.Owner.Login
+	}
+	if item.Description != nil {
+		g.Description = *item.Description
+	}
+	if item.Public != nil {
+		g.Public = *item.Public
+	}
+	if item.HTMLURL != nil {
+		g.URL = *item.HTMLURL
+	}
 
 	for _, file := range item.Files {
-		g.Files = append(g.Files, &GistFile{
-			Size:     *file.Size,
-			Filename: *file.Filename,
-			RawURL:   *file.RawURL,
-		})
+		f := &GistFile{}
+		if file.Size != nil {
+			f.Size = *file.Size
+		}
+		if file.Filename != nil {
+			f.Filename = *file.Filename
+		}
+		if file.RawURL != nil {
+			f.RawURL = *file.RawURL
+		}
+		g.Files = append(g.Files, f)
 	}
 }
