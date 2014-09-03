@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.google.com/p/goauth2/oauth"
 	"github.com/gorilla/sessions"
@@ -62,6 +63,16 @@ func NewHandler(db *DB, path, token, secret string) *Handler {
 
 // ServeHTTP dispatches incoming HTTP requests.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Ignore the noise.
+	if r.URL.Path == "/favicon.ico" {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Record the start time.
+	t := time.Now()
+
+	// Route to the appropriate handlers.
 	switch r.URL.Path {
 	case "/":
 		h.root(w, r)
@@ -75,11 +86,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.oembedJSON(w, r)
 	case "/oembed.xml":
 		h.oembedXML(w, r)
-	case "favicon.ico":
-		http.NotFound(w, r)
 	default:
 		h.gist(w, r)
 	}
+
+	// Write to access log.
+	h.log(r, &t)
+}
+
+// log records the HTTP access to stdout.
+func (h *Handler) log(r *http.Request, t *time.Time) {
+	fmt.Printf(`%s - - [%s] "%s %s %s" - - %q %q`+"\n", r.RemoteAddr, t.Format("02/Jan/2006:15:04:05 -0700"), r.Method, r.RequestURI, r.Proto, r.Referer(), r.UserAgent())
 }
 
 // Session returns the current session.
