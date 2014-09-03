@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,7 +65,46 @@ func TestHandler_Root_Authorized(t *testing.T) {
 }
 
 // Ensure the user is redirected to GitHub for authorization.
-func TestHandler_Authorize(t *testing.T) { t.Skip("pending") }
+func TestHandler_Authorize(t *testing.T) {
+	// Create the mock session store.
+	var saved bool
+	store := NewTestStore()
+	session := sessions.NewSession(store, "")
+	store.GetFunc = func(r *http.Request, name string) (*sessions.Session, error) {
+		return session, nil
+	}
+	store.SaveFunc = func(r *http.Request, w http.ResponseWriter, session *sessions.Session) error {
+		saved = true
+		return nil
+	}
+
+	// Setup handler.
+	h := NewTestHandler()
+	h.Handler.Store = store
+	defer h.Close()
+
+	// Create non-redirecting client.
+	var redirectURL *url.URL
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			redirectURL = req.URL
+			return errors.New("no redirects")
+		},
+	}
+
+	// Retrieve authorize redirect.
+	// We should be redirected to GitHub's OAuth URL.
+	// We should save the auth state to the session so it can be check on callback.
+	resp, _ := client.Get(h.Server.URL + "/_/authorize")
+	resp.Body.Close()
+	equals(t, "https", redirectURL.Scheme)
+	equals(t, "github.com", redirectURL.Host)
+	equals(t, "/login/oauth/authorize", redirectURL.Path)
+	equals(t, 32, len(redirectURL.Query().Get("state")))
+
+	assert(t, saved, "expected session save")
+	equals(t, redirectURL.Query().Get("state"), session.Values["AuthState"])
+}
 
 // Ensure the OAuth2 callback is processed correctly.
 func TestHandler_Authorized(t *testing.T) { t.Skip("pending") }

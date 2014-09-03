@@ -11,13 +11,13 @@ TODO
 - [ ] UI
   - [ ] Root (unauthenticated)
   - [ ] Root (authenticated)
-- [ ] Rate limit reloads (1 per sec?)
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
 
 ## Future
 
+- [ ] Rate limit reloads (1 per sec?)
 - [ ] Group gists together (by tag?, by folder?)
 
 
