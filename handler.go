@@ -246,6 +246,7 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve width & height.
 	width, height := DefaultEmbedWidth, DefaultEmbedHeight
+	warn("???", u)
 	if v, _ := strconv.Atoi(q.Get("width")); v > 0 {
 		width = v
 	}
@@ -372,7 +373,7 @@ func ParsePath(s string) (gistID, filename string, err error) {
 		return
 	} else if len(a) == 3 {
 		err = errNonCanonicalPath
-		return
+		a = append(a, "")
 	}
 
 	// Extract the values from the URL.

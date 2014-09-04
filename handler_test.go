@@ -113,16 +113,79 @@ func TestHandler_Authorized(t *testing.T) { t.Skip("pending") }
 func TestHandler_Authorized_ErrInvalidState(t *testing.T) { t.Skip("pending") }
 
 // Ensure an oEmbed is processed correctly.
-func TestHandler_OEmbed(t *testing.T) { t.Skip("pending") }
+func TestHandler_OEmbed(t *testing.T) {
+	h := NewTestHandler()
+	defer h.Close()
+
+	// Create the gist in the database.
+	h.DB.Update(func(tx *gist.Tx) error {
+		return tx.SaveGist(&gist.Gist{ID: "abc123", Owner: "ben", Description: "My Gist"})
+	})
+
+	// Retrieve oEmbed.
+	u, _ := url.Parse(h.Server.URL + "/oembed.json")
+	u.RawQuery = (&url.Values{"url": {"https://gist.exposed/benbjohnson/abc123"}}).Encode()
+	resp, err := http.Get(u.String())
+	ok(t, err)
+	equals(t, 200, resp.StatusCode)
+	equals(t, `{"version":"1.0","type":"rich","html":"","width":600,"height":300,"title":"My Gist","cache_age":0,"author_name":"ben","author_url":"https://github.com/ben","provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
+}
 
 // Ensure an oEmbed with width/height set is returned correctly.
-func TestHandler_OEmbed_WidthHeight(t *testing.T) { t.Skip("pending") }
+func TestHandler_OEmbed_WidthHeight(t *testing.T) {
+	h := NewTestHandler()
+	defer h.Close()
 
-// Ensure a missing gist returns an error.
-func TestHandler_OEmbed_ErrNotFound(t *testing.T) { t.Skip("pending") }
+	// Create the gist in the database.
+	h.DB.Update(func(tx *gist.Tx) error {
+		return tx.SaveGist(&gist.Gist{ID: "abc123", Owner: "ben", Description: "My Gist"})
+	})
+
+	// Retrieve oEmbed.
+	u, _ := url.Parse(h.Server.URL + "/oembed.json")
+	u.RawQuery = (&url.Values{"url": {"https://gist.exposed/benbjohnson/abc123?width=50&height=60"}}).Encode()
+	resp, err := http.Get(u.String())
+	ok(t, err)
+	equals(t, 200, resp.StatusCode)
+	equals(t, `{"version":"1.0","type":"rich","html":"","width":50,"height":60,"title":"My Gist","cache_age":0,"author_name":"ben","author_url":"https://github.com/ben","provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
+}
+
+// Ensure an oEmbed for a missing gist returns a 404.
+func TestHandler_OEmbed_ErrNotFound(t *testing.T) {
+	h := NewTestHandler()
+	defer h.Close()
+
+	// Retrieve oEmbed.
+	u, _ := url.Parse(h.Server.URL + "/oembed.json")
+	u.RawQuery = (&url.Values{"url": {"https://gist.exposed/benbjohnson/abc123"}}).Encode()
+	resp, err := http.Get(u.String())
+	resp.Body.Close()
+	ok(t, err)
+	equals(t, 404, resp.StatusCode)
+}
+
+// Ensure an oEmbed with a bad url returns a 404.
+func TestHandler_OEmbed_ErrInvalidPath(t *testing.T) {
+	h := NewTestHandler()
+	defer h.Close()
+
+	// Retrieve oEmbed.
+	resp, err := http.Get(h.Server.URL + "/oembed.json?url=bad_url")
+	resp.Body.Close()
+	ok(t, err)
+	equals(t, 404, resp.StatusCode)
+}
 
 // Ensure an XML oEmbed returns an error.
-func TestHandler_OEmbed_XML_ErrStatusNotImplemented(t *testing.T) { t.Skip("pending") }
+func TestHandler_OEmbed_XML_ErrStatusNotImplemented(t *testing.T) {
+	h := NewTestHandler()
+	defer h.Close()
+
+	// Retrieve oEmbed.
+	resp, _ := http.Get(h.Server.URL + "/oembed.xml")
+	resp.Body.Close()
+	equals(t, 501, resp.StatusCode)
+}
 
 // Ensure a gist can be retrieved.
 func TestHandler_Gist(t *testing.T) { t.Skip("pending") }
