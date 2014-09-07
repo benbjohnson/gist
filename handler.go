@@ -42,6 +42,7 @@ type Handler struct {
 	db     *DB
 	config *oauth.Config
 	Store  sessions.Store
+	Logger *log.Logger
 
 	// NewGitHubClient returns a new GitHub client.
 	NewGitHubClient func(string) GitHubClient
@@ -60,6 +61,7 @@ func NewHandler(db *DB, token, secret string) *Handler {
 		},
 		Store:           sessions.NewCookieStore(db.secret),
 		NewGitHubClient: NewGitHubClient,
+		Logger:          log.New(os.Stderr, "", log.LstdFlags),
 	}
 }
 
@@ -101,7 +103,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // log records the HTTP access to stdout.
 func (h *Handler) log(r *http.Request, t *time.Time) {
-	fmt.Printf(`%s - - [%s] "%s %s %s" - - %q %q`+"\n", r.RemoteAddr, t.Format("02/Jan/2006:15:04:05 -0700"), r.Method, r.RequestURI, r.Proto, r.Referer(), r.UserAgent())
+	h.Logger.Printf(`%s %s %q %q`+"\n", r.Method, r.RequestURI, r.Referer(), r.UserAgent())
 }
 
 // Session returns the current session.
@@ -133,7 +135,7 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 	client := h.NewGitHubClient(user.AccessToken)
 	gists, err := client.Gists("")
 	if err != nil {
-		log.Println("github gists:", err)
+		h.Logger.Println("github gists:", err)
 		http.Error(w, "github api error", http.StatusInternalServerError)
 		return
 	}
@@ -165,7 +167,7 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 
 	// Verify that the auth code was not tampered with.
 	if s := r.FormValue("state"); s != state {
-		log.Printf("tampered state: %q != %q", s, state)
+		h.Logger.Printf("tampered state: %q != %q", s, state)
 		http.Error(w, "auth state mismatch", http.StatusBadRequest)
 		return
 	}
@@ -174,7 +176,7 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 	var t = &oauth.Transport{Config: h.config}
 	token, err := t.Exchange(r.FormValue("code"))
 	if err != nil {
-		log.Println("exchange:", err)
+		h.Logger.Println("exchange:", err)
 		http.Error(w, "oauth exchange error", http.StatusBadRequest)
 		return
 	}
@@ -183,7 +185,7 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 	client := NewGitHubClient(token.AccessToken)
 	user, err := client.User("")
 	if err != nil {
-		log.Println("github:", err)
+		h.Logger.Println("github:", err)
 		http.Error(w, "github api error", http.StatusInternalServerError)
 		return
 	}
@@ -194,7 +196,7 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 		return tx.SaveUser(user)
 	})
 	if err != nil {
-		log.Println("save user:", err)
+		h.Logger.Println("save user:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -238,7 +240,7 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 	// Retrieve URL parameter and parse.
 	u, err := url.Parse(r.FormValue("url"))
 	if err != nil {
-		log.Printf("oembed: %s", err)
+		h.Logger.Printf("oembed: %s", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -246,7 +248,6 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve width & height.
 	width, height := DefaultEmbedWidth, DefaultEmbedHeight
-	warn("???", u)
 	if v, _ := strconv.Atoi(q.Get("width")); v > 0 {
 		width = v
 	}
@@ -259,8 +260,9 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 	if err == errNonCanonicalPath {
 		u.Path += "/"
 	} else if err != nil {
-		log.Printf("oembed: parse path: %s", err)
+		h.Logger.Printf("oembed: parse path: %s", err)
 		http.NotFound(w, r)
+		return
 	}
 
 	// Retrieve gist.
@@ -270,11 +272,11 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if err != nil {
-		log.Printf("oembed: %s", err)
+		h.Logger.Printf("oembed: %s", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	} else if gist == nil {
-		log.Printf("oembed: not found: %s", gistID)
+		h.Logger.Printf("oembed: not found: %s", gistID)
 		http.NotFound(w, r)
 		return
 	}
@@ -296,7 +298,7 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 	// Write out the JSON-encoded response.
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Println("json:", err)
+		h.Logger.Println("json:", err)
 	}
 }
 
@@ -318,7 +320,7 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, u.String(), http.StatusFound)
 		return
 	} else if err != nil {
-		log.Println("parse path:", err)
+		h.Logger.Println("parse path:", err)
 		http.NotFound(w, r)
 		return
 	}
@@ -339,7 +341,7 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 	// Update gist.
 	if reload {
 		if err := h.db.LoadGist(session.UserID(), gistID); err != nil {
-			log.Printf("reload gist: %s", err)
+			h.Logger.Printf("reload gist: %s", err)
 			http.Error(w, "error loading gist", http.StatusInternalServerError)
 			return
 		}
@@ -349,7 +351,7 @@ func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
 	path := h.db.GistFilePath(gistID, filename)
 	f, err := os.Open(path)
 	if err != nil {
-		log.Printf("read gist: %s: %s", path, err)
+		h.Logger.Printf("read gist: %s: %s", path, err)
 		http.NotFound(w, r)
 		return
 	}

@@ -232,6 +232,7 @@ func NewTestHandler() *TestHandler {
 
 	// Open handler and test HTTP server.
 	h := gist.NewHandler(db, "ABC", "123")
+	h.Logger = log.New(ioutil.Discard, "", 0)
 	s := httptest.NewServer(h)
 
 	return &TestHandler{h, path, db, s}
