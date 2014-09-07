@@ -82,19 +82,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Route to the appropriate handlers.
 	switch r.URL.Path {
 	case "/":
-		h.root(w, r)
+		h.HandleRoot(w, r)
 	case "/_/authorize":
-		h.authorize(w, r)
+		h.HandleAuthorize(w, r)
 	case "/_/authorized":
-		h.authorized(w, r)
-	case "/oembed", "/oembed/":
-		h.oembed(w, r)
+		h.HandleAuthorized(w, r)
+	case "/oembed", "/oembed/", "/oembed.xml":
+		h.HandleOEmbed(w, r)
 	case "/oembed.json":
-		h.oembedJSON(w, r)
-	case "/oembed.xml":
-		h.oembedXML(w, r)
+		h.HandleOEmbedJSON(w, r)
 	default:
-		h.gist(w, r)
+		h.HandleGist(w, r)
 	}
 
 	// Write to access log.
@@ -112,8 +110,8 @@ func (h *Handler) Session(r *http.Request) *Session {
 	return &Session{s}
 }
 
-// root serves the home page.
-func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
+// HandleRoot serves the home page.
+func (h *Handler) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session. If not authorized then send to GitHub.
 	session := h.Session(r)
 	if !session.Authenticated() {
@@ -144,8 +142,8 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 	_ = (&tmpl{}).Index(w, gists)
 }
 
-// authorize redirects the user to GitHub OAuth2 authorization.
-func (h *Handler) authorize(w http.ResponseWriter, r *http.Request) {
+// HandleAuthorize redirects the user to GitHub OAuth2 authorization.
+func (h *Handler) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	// Generate auth state.
 	var b [16]byte
 	_, _ = rand.Read(b[:])
@@ -160,8 +158,8 @@ func (h *Handler) authorize(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, h.config.AuthCodeURL(state), http.StatusFound)
 }
 
-// authorized receives the GitHub OAuth2 callback.
-func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
+// HandleAuthorized receives the GitHub OAuth2 callback.
+func (h *Handler) HandleAuthorized(w http.ResponseWriter, r *http.Request) {
 	session := h.Session(r)
 	state, _ := session.Values["AuthState"].(string)
 
@@ -209,20 +207,18 @@ func (h *Handler) authorized(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-// oembed provides an oEmbed endpoint.
-func (h *Handler) oembed(w http.ResponseWriter, r *http.Request) {
+// HandleOEmbed provides an oEmbed endpoint.
+func (h *Handler) HandleOEmbed(w http.ResponseWriter, r *http.Request) {
 	switch r.FormValue("format") {
 	case "json":
-		h.oembedJSON(w, r)
-	case "xml":
-		h.oembedXML(w, r)
+		h.HandleOEmbedJSON(w, r)
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
 	}
 }
 
-// oembed provides an oEmbed endpoint.
-func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
+// HandleOEmbedJSON provides an oEmbed endpoint.
+func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Version      string `json:"version"`
 		Type         string `json:"type"`
@@ -302,14 +298,9 @@ func (h *Handler) oembedJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// oembedXML provides an oEmbed XML endpoint.
-func (h *Handler) oembedXML(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// gist serves a single file for a gist.
+// HandleGist serves a single file for a gist.
 // If the root is requested then the gist content is refreshed.
-func (h *Handler) gist(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleGist(w http.ResponseWriter, r *http.Request) {
 	session := h.Session(r)
 
 	// Extract the path variables.
