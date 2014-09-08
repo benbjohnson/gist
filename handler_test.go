@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"code.google.com/p/goauth2/oauth"
 	"github.com/benbjohnson/gist"
 	"github.com/gorilla/sessions"
 )
@@ -107,7 +108,60 @@ func TestHandler_Authorize(t *testing.T) {
 }
 
 // Ensure the OAuth2 callback is processed correctly.
-func TestHandler_Authorized(t *testing.T) { t.Skip("pending") }
+func TestHandler_Authorized(t *testing.T) {
+	// Create the mock session store.
+	store := NewTestStore()
+	session := sessions.NewSession(store, "")
+	session.Values["AuthState"] = "abc123"
+	store.GetFunc = func(r *http.Request, name string) (*sessions.Session, error) {
+		return session, nil
+	}
+	store.SaveFunc = func(r *http.Request, w http.ResponseWriter, session *sessions.Session) error { return nil }
+
+	// Return a fake user.
+	client := &MockGitHubClient{}
+	client.GistsFunc = func(username string) ([]*gist.Gist, error) { return nil, nil }
+	client.UserFunc = func(username string) (*gist.User, error) {
+		return &gist.User{ID: 1000, Username: "john"}, nil
+	}
+
+	// Create non-redirecting client.
+	var redirectURL *url.URL
+	httpClient := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			redirectURL = req.URL
+			return errors.New("no redirects")
+		},
+	}
+
+	// Setup handler.
+	h := NewTestHandler()
+	h.Handler.Store = store
+	h.Handler.NewGitHubClient = func(token string) gist.GitHubClient {
+		equals(t, "mytoken", token)
+		return client
+	}
+	h.ExchangeFunc = func(code string) (*oauth.Token, error) { return &oauth.Token{AccessToken: "mytoken"}, nil }
+	defer h.Close()
+
+	// Process callback.
+	resp, _ := httpClient.Get(h.Server.URL + "/_/authorized?state=abc123")
+	resp.Body.Close()
+
+	// We should be redirected to the root path.
+	equals(t, 302, resp.StatusCode)
+	equals(t, "/", redirectURL.Path)
+
+	// The session should have the user id set.
+	equals(t, 1000, session.Values["UserID"])
+
+	// The user should exist.
+	h.DB.View(func(tx *gist.Tx) error {
+		u, _ := tx.User(1000)
+		equals(t, &gist.User{ID: 1000, Username: "john", AccessToken: "mytoken"}, u)
+		return nil
+	})
+}
 
 // Ensure an OAuth2 callback with non-matching auth state causes an error.
 func TestHandler_Authorized_ErrInvalidState(t *testing.T) { t.Skip("pending") }

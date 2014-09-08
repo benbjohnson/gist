@@ -46,11 +46,15 @@ type Handler struct {
 
 	// NewGitHubClient returns a new GitHub client.
 	NewGitHubClient func(string) GitHubClient
+
+	// ExchangeFunc processes a returned OAuth2 code into a token.
+	// This function is used for testing.
+	ExchangeFunc func(string) (*oauth.Token, error)
 }
 
 // NewHandler returns a new instance of Handler.
 func NewHandler(db *DB, token, secret string) *Handler {
-	return &Handler{
+	h := &Handler{
 		db: db,
 		config: &oauth.Config{
 			ClientId:     token,
@@ -63,6 +67,8 @@ func NewHandler(db *DB, token, secret string) *Handler {
 		NewGitHubClient: NewGitHubClient,
 		Logger:          log.New(os.Stderr, "", log.LstdFlags),
 	}
+	h.ExchangeFunc = h.exchangeFunc
+	return h
 }
 
 // DB returns the database reference.
@@ -171,8 +177,7 @@ func (h *Handler) HandleAuthorized(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the access token.
-	var t = &oauth.Transport{Config: h.config}
-	token, err := t.Exchange(r.FormValue("code"))
+	token, err := h.exchange(r.FormValue("code"))
 	if err != nil {
 		h.Logger.Println("exchange:", err)
 		http.Error(w, "oauth exchange error", http.StatusBadRequest)
@@ -180,7 +185,7 @@ func (h *Handler) HandleAuthorized(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve user data.
-	client := NewGitHubClient(token.AccessToken)
+	client := h.NewGitHubClient(token.AccessToken)
 	user, err := client.User("")
 	if err != nil {
 		h.Logger.Println("github:", err)
@@ -353,6 +358,15 @@ func (h *Handler) HandleGist(w http.ResponseWriter, r *http.Request) {
 
 	// Copy the file to the response.
 	_, _ = io.Copy(w, f)
+}
+
+func (h *Handler) exchange(code string) (*oauth.Token, error) {
+	return h.ExchangeFunc(code)
+}
+
+func (h *Handler) exchangeFunc(code string) (*oauth.Token, error) {
+	var t = &oauth.Transport{Config: h.config}
+	return t.Exchange(code)
 }
 
 // ParsePath extracts the gist id and filename from the path.
