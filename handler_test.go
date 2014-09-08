@@ -163,9 +163,6 @@ func TestHandler_Authorized(t *testing.T) {
 	})
 }
 
-// Ensure an OAuth2 callback with non-matching auth state causes an error.
-func TestHandler_Authorized_ErrInvalidState(t *testing.T) { t.Skip("pending") }
-
 // Ensure an oEmbed is processed correctly.
 func TestHandler_OEmbed(t *testing.T) {
 	h := NewTestHandler()
@@ -242,13 +239,72 @@ func TestHandler_OEmbed_XML_ErrStatusNotImplemented(t *testing.T) {
 }
 
 // Ensure a gist can be retrieved.
-func TestHandler_Gist(t *testing.T) { t.Skip("pending") }
+func TestHandler_Gist_Authorized(t *testing.T) {
+	// Run mock GitHub raw server.
+	mux := http.NewServeMux()
+	mux.HandleFunc(`/index.html`, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`<html><body></body></html>`))
+	})
+	mux.HandleFunc(`/awesome.js`, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`alert(100);`))
+	})
+	s := httptest.NewServer(mux)
+	defer s.Close()
 
-// Ensure a gist with a non-canonical URL is redirected.
-func TestHandler_Gist_NonCanonical(t *testing.T) { t.Skip("pending") }
+	// Create the mock session store.
+	store := NewTestStore()
+	session := sessions.NewSession(store, "")
+	session.Values["UserID"] = 1000
+	store.GetFunc = func(r *http.Request, name string) (*sessions.Session, error) { return session, nil }
+	store.SaveFunc = func(r *http.Request, w http.ResponseWriter, session *sessions.Session) error { return nil }
 
-// Ensure a gist will be reloaded if user is authorized.
-func TestHandler_Gist_Reload(t *testing.T) { t.Skip("pending") }
+	// Return a gist data.
+	client := &MockGitHubClient{}
+	client.GistFunc = func(id string) (*gist.Gist, error) {
+		equals(t, "xxx", id)
+		return &gist.Gist{
+			ID:          "xxx",
+			Owner:       "john",
+			Description: "my gist",
+			Public:      true,
+			URL:         "-",
+			Files: []*gist.GistFile{
+				&gist.GistFile{Size: 100, Filename: "index.html", RawURL: s.URL + "/index.html"},
+				&gist.GistFile{Size: 200, Filename: "awesome.js", RawURL: s.URL + "/awesome.js"},
+			},
+		}, nil
+	}
+
+	// Setup handler.
+	h := NewTestHandler()
+	h.Handler.Store = store
+	h.Handler.NewGitHubClient = func(token string) gist.GitHubClient { return client }
+	h.DB.NewGitHubClient = h.Handler.NewGitHubClient
+	defer h.Close()
+
+	// Process callback.
+	resp, _ := http.Get(h.Server.URL + "/john/xxx/")
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	// The HTML file should be returned.
+	equals(t, 200, resp.StatusCode)
+	equals(t, `<html><body></body></html>`, string(body))
+
+	// The files should be saved to the hard drive.
+	var content []byte
+	content, _ = ioutil.ReadFile(filepath.Join(h.DB.GistPath, "xxx", "index.html"))
+	equals(t, `<html><body></body></html>`, string(content))
+	content, _ = ioutil.ReadFile(filepath.Join(h.DB.GistPath, "xxx", "awesome.js"))
+	equals(t, `alert(100);`, string(content))
+
+	// The gist should be saved to the db.
+	h.DB.View(func(tx *gist.Tx) error {
+		g, _ := tx.Gist("xxx")
+		assert(t, g != nil, "expected gist")
+		return nil
+	})
+}
 
 // Ensure a gist with an invalid path returns an error.
 func TestHandler_Gist_ErrInvalidPath(t *testing.T) { t.Skip("pending") }
@@ -286,7 +342,9 @@ func NewTestHandler() *TestHandler {
 
 	// Open handler and test HTTP server.
 	h := gist.NewHandler(db, "ABC", "123")
-	h.Logger = log.New(ioutil.Discard, "", 0)
+	if !testing.Verbose() {
+		h.Logger = log.New(ioutil.Discard, "", 0)
+	}
 	s := httptest.NewServer(h)
 
 	return &TestHandler{h, path, db, s}

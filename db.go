@@ -117,7 +117,6 @@ func (db *DB) LoadGist(userID int, gistID string) error {
 		if err := tx.SaveGist(gist); err != nil {
 			return fmt.Errorf("save gist: %s", err)
 		}
-		fmt.Println("save:", gist.ID)
 
 		return nil
 	})
