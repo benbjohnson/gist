@@ -33,6 +33,10 @@ func (db *DB) Open(path string, mode os.FileMode) error {
 	}
 	db.DB = d
 
+	if db.NewGitHubClient == nil {
+		db.NewGitHubClient = NewGitHubClient
+	}
+
 	return db.Update(func(tx *Tx) error {
 		// Initialize the top-level buckets.
 		_, _ = tx.CreateBucketIfNotExists([]byte("meta"))
@@ -80,9 +84,6 @@ func (db *DB) LoadGist(userID int, gistID string) error {
 		}
 
 		// Create GitHub client.
-		if db.NewGitHubClient == nil {
-			db.NewGitHubClient = NewGitHubClient
-		}
 		client := db.NewGitHubClient(u.AccessToken)
 
 		// Retrieve gist data.

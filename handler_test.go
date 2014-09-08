@@ -306,9 +306,6 @@ func TestHandler_Gist_Authorized(t *testing.T) {
 	})
 }
 
-// Ensure a gist with an invalid path returns an error.
-func TestHandler_Gist_ErrInvalidPath(t *testing.T) { t.Skip("pending") }
-
 // Ensure a path is correctly parsed into gist id and filename.
 func TestHandler_ParsePath(t *testing.T) { t.Skip("pending (TT)") }
 
