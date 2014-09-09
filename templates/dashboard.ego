@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <% t.head(w) %>
+    <% _ = t.head(w) %>
   </head>
 
   <body class="index">

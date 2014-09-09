@@ -17,7 +17,7 @@ if _, err := fmt.Fprintf(w, "<html lang=\"en\">\n  "); err != nil { return err }
 //line dashboard.ego:7
 if _, err := fmt.Fprintf(w, "<head>\n    "); err != nil { return err }
 //line dashboard.ego:8
- t.head(w) 
+ _ = t.head(w) 
 //line dashboard.ego:9
 if _, err := fmt.Fprintf(w, "\n  "); err != nil { return err }
 //line dashboard.ego:9
@@ -307,7 +307,7 @@ if _, err := fmt.Fprintf(w, "<html lang=\"en\">\n  "); err != nil { return err }
 //line index.ego:5
 if _, err := fmt.Fprintf(w, "<head>\n    "); err != nil { return err }
 //line index.ego:6
- t.head(w) 
+ _ = t.head(w) 
 //line index.ego:7
 if _, err := fmt.Fprintf(w, "\n  "); err != nil { return err }
 //line index.ego:7
