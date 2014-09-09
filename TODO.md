@@ -3,9 +3,6 @@ TODO
 
 ## Uncompleted
 
-- [ ] UI
-  - [ ] Home page (unauthenticated)
-  - [ ] Dashboard (authenticated)
 - [ ] Visually test embeds
 - [ ] Add .gist-exposed class to iframe.
 - [ ] Get better logo
@@ -43,3 +40,6 @@ TODO
   - [x] MockGitHubClient
   - [x] GitHub tests
   - [x] Handler tests
+- [x] UI
+  - [x] Home page (unauthenticated)
+  - [x] Dashboard (authenticated)

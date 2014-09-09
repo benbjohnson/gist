@@ -1,25 +1,98 @@
-<%! func (t *tmpl) Dashboard(w io.Writer, gists []*Gist) error %>
+<%! func (t *tmpl) Dashboard(w io.Writer, hosted, recent []*Gist) error %>
+
+<%% import "time" %%>
 
 <!DOCTYPE html>
 <html lang="en">
-  <body>
-    <h1>Gist Exposed!</h1>
+  <head>
+    <% t.head(w) %>
+  </head>
 
-    <h2>Recent Gists</h2>
+  <body class="index">
+    <div class="container">
+      <div class="header">
+        <ul class="nav nav-pills pull-right">
+          <li><a href="/_/logout">Log out</a></li>
+        </ul>
+        <h3 class="text-muted">Gist Exposed!</h3>
+      </div>
 
-    <ol>
-      <% for _, g := range gists { %>
-        <li>
-          <a href="/<%=g.Owner%>/<%=g.ID%>">
-            <% if g.Description != "" { %>
-              <%= g.Description %>
-            <% } else { %>
-              <em>Untitled</em>
+      <h3>Hosted Gists</h3>
+
+      <% if len(hosted) == 0 { %>
+        <div class="row">
+          <div class="col-lg-12">
+            <p>You do not have any gists hosted on Gist Exposed.</p>
+          </div>
+        </div>
+      <% } else { %>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-md-9">Description</th>
+              <th class="col-md-3">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for _, g := range hosted { %>
+              <tr>
+                <td class="col-lg-9">
+                  <a href="/<%=g.ID%>" target="_blank">
+                    <% if g.Description != "" { %>
+                      <%= g.Description %>
+                    <% } else { %>
+                      <em>Untitled</em>
+                    <% } %>
+                  </a>
+                </td>
+                <td class="col-lg-3">
+                  <%= g.CreatedAt.Format(time.Stamp) %>
+                </td>
+              </tr>
             <% } %>
-          </a>
-        </li>
+          </tbody>
+        </table>
       <% } %>
-    </ol>
 
+
+      <h3>Recent Gists</h3>
+
+      <% if len(recent) == 0 { %>
+        <div class="row">
+          <div class="col-lg-12">
+            <p>You do not have any gists available on GitHub.</p>
+          </div>
+        </div>
+      <% } else { %>
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-lg-9">Description</th>
+              <th class="col-lg-3">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for _, g := range recent { %>
+              <tr>
+                <td class="col-md-9">
+                  <a href="/<%=g.ID%>" target="_blank">
+                    <% if g.Description != "" { %>
+                      <%= g.Description %>
+                    <% } else { %>
+                      <em>Untitled</em>
+                    <% } %>
+                  </a>
+                </td>
+                <td class="col-md-3">
+                  <%= g.CreatedAt.Format(time.Stamp) %>
+                </td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      <% } %>
+
+    </div> <!-- /container -->
   </body>
 </html>
+

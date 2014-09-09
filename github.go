@@ -86,8 +86,8 @@ func (g *Gist) deserializeGist(item *github.Gist, useContent bool) {
 	if item.ID != nil {
 		g.ID = *item.ID
 	}
-	if item.Owner != nil && item.Owner.Login != nil {
-		g.Owner = *item.Owner.Login
+	if item.Owner != nil && item.Owner.ID != nil {
+		g.UserID = *item.Owner.ID
 	}
 	if item.Description != nil {
 		g.Description = *item.Description
@@ -97,6 +97,9 @@ func (g *Gist) deserializeGist(item *github.Gist, useContent bool) {
 	}
 	if item.HTMLURL != nil {
 		g.URL = *item.HTMLURL
+	}
+	if item.CreatedAt != nil {
+		g.CreatedAt = *item.CreatedAt
 	}
 
 	for _, file := range item.Files {

@@ -3,6 +3,7 @@ package gist
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/bugsnag/bugsnag-go"
 )
@@ -10,11 +11,12 @@ import (
 // Gist represents a single GitHub gist.
 type Gist struct {
 	ID          string      `json:"id"`
-	Owner       string      `json:"owner"`
+	UserID      int         `json:"userID"`
 	Description string      `json:"description"`
 	Public      bool        `json:"public"`
 	URL         string      `json:"url"`
 	Files       []*GistFile `json:"files"`
+	CreatedAt   time.Time   `json:"createdAt"`
 }
 
 // GistFile represents an individual file within a gist.

@@ -1,6 +1,7 @@
 package gist
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
@@ -40,8 +41,10 @@ func (db *DB) Open(path string, mode os.FileMode) error {
 	return db.Update(func(tx *Tx) error {
 		// Initialize the top-level buckets.
 		_, _ = tx.CreateBucketIfNotExists([]byte("meta"))
-		_, _ = tx.CreateBucketIfNotExists([]byte("users"))
 		_, _ = tx.CreateBucketIfNotExists([]byte("gists"))
+		_, _ = tx.CreateBucketIfNotExists([]byte("users"))
+
+		_, _ = tx.CreateBucketIfNotExists([]byte("gistsByUserID"))
 
 		// Initialize secret.
 		if err := tx.GenerateSecretIfNotExists(); err != nil {
@@ -137,6 +140,8 @@ func (tx *Tx) meta() *bolt.Bucket  { return tx.Bucket([]byte("meta")) }
 func (tx *Tx) gists() *bolt.Bucket { return tx.Bucket([]byte("gists")) }
 func (tx *Tx) users() *bolt.Bucket { return tx.Bucket([]byte("users")) }
 
+func (tx *Tx) gistsByUserID() *bolt.Bucket { return tx.Bucket([]byte("gistsByUserID")) }
+
 // Gist retrieves a gist from the database by ID.
 func (tx *Tx) Gist(id string) (g *Gist, err error) {
 	if v := tx.gists().Get([]byte(id)); v != nil {
@@ -153,7 +158,29 @@ func (tx *Tx) SaveGist(g *Gist) error {
 	if err != nil {
 		return fmt.Errorf("marshal gist: %s", err)
 	}
+
+	// Save index.
+	if err := tx.gistsByUserID().Put(append(i64tob(int64(g.UserID)), []byte(g.ID)...), []byte{}); err != nil {
+		return err
+	}
+
 	return tx.gists().Put([]byte(g.ID), b)
+}
+
+// GistsByUserID retrieves a list of gists owned by a user.
+func (tx *Tx) GistsByUserID(userID int) ([]*Gist, error) {
+	c := tx.gistsByUserID().Cursor()
+	seek := i64tob(int64(userID))
+
+	var a []*Gist
+	for k, _ := c.Seek(seek); bytes.HasPrefix(k, seek); k, _ = c.Next() {
+		g, err := tx.Gist(string(k[len(seek):]))
+		if err != nil {
+			return nil, err
+		}
+		a = append(a, g)
+	}
+	return a, nil
 }
 
 // User retrieves an user from the database by ID.

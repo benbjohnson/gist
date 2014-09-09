@@ -142,10 +142,16 @@ func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve user.
+	// Retrieve user and hosted gists.
 	var user *User
+	var hosted []*Gist
 	err := h.db.View(func(tx *Tx) (err error) {
-		user, err = tx.User(session.UserID())
+		if user, err = tx.User(session.UserID()); err != nil {
+			return
+		}
+		if hosted, err = tx.GistsByUserID(session.UserID()); err != nil {
+			return
+		}
 		return
 	})
 	if err != nil {
@@ -154,7 +160,7 @@ func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve available gists from GitHub.
 	client := h.NewGitHubClient(user.AccessToken)
-	gists, err := client.Gists("")
+	recent, err := client.Gists("")
 	if err != nil {
 		h.Logger.Println("github gists:", err)
 		http.Error(w, "github api error", http.StatusInternalServerError)
@@ -162,7 +168,7 @@ func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write gists out.
-	_ = (&tmpl{}).Dashboard(w, gists)
+	_ = (&tmpl{}).Dashboard(w, hosted, recent)
 }
 
 // HandleLogin redirects the user to GitHub OAuth2 authorization.
@@ -260,8 +266,6 @@ func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 		Height       int    `json:"height"`
 		Title        string `json:"title"`
 		CacheAge     int    `json:"cache_age"`
-		AuthorName   string `json:"author_name"`
-		AuthorURL    string `json:"author_url"`
 		ProviderName string `json:"provider_name"`
 		ProviderURL  string `json:"provider_url"`
 	}
@@ -318,8 +322,6 @@ func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 		Height:       height,
 		Title:        gist.Description,
 		CacheAge:     EmbedCacheAge,
-		AuthorName:   gist.Owner,
-		AuthorURL:    (&url.URL{Scheme: "https", Host: "github.com", Path: "/" + gist.Owner}).String(),
 		ProviderName: "Gist Exposed!",
 		ProviderURL:  "https://gist.exposed",
 	}
@@ -405,21 +407,23 @@ func (h *Handler) exchangeFunc(code string) (*oauth.Token, error) {
 
 // ParsePath extracts the gist id and filename from the path.
 func ParsePath(s string) (gistID, filename string, err error) {
-	// Break apart path into components.
-	// A path is invalid if we have less than 3 components or it's a reserved path.
-	// If we have exactly 3 components, it's non-canonical and should be redirected.
-	a := strings.Split(s, "/")
-	if len(a) < 3 || a[0] == "_" {
-		err = fmt.Errorf("invalid path: %s", s)
-		return
-	} else if len(a) == 3 {
-		err = errNonCanonicalPath
-		a = append(a, "")
+	a := strings.Split(s, "/")[1:]
+	switch len(a) {
+	case 1:
+		if a[0] == "" {
+			return "", "", fmt.Errorf("invalid path")
+		}
+		return a[0], "", errNonCanonicalPath
+	case 2:
+		if strings.Contains(a[1], ".") || a[1] == "" {
+			return a[0], a[1], nil
+		}
+		return a[1], "", errNonCanonicalPath
+	case 3:
+		return a[1], a[2], nil
+	default:
+		return "", "", fmt.Errorf("invalid path: %s", s)
 	}
-
-	// Extract the values from the URL.
-	gistID, filename = a[2], strings.Join(a[3:], "/")
-	return
 }
 
 // Session represents an HTTP session.

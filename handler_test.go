@@ -18,22 +18,14 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-// Ensure the user gets redirected to be authorized.
+// Ensure the user sees the home page.
 func TestHandler_Root_Unauthorized(t *testing.T) {
 	h := NewTestHandler()
 	defer h.Close()
 
-	var redirectURI string
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			redirectURI = req.URL.RequestURI()
-			return errors.New("no redirects")
-		},
-	}
-
-	resp, _ := client.Get(h.Server.URL)
+	resp, _ := http.Get(h.Server.URL)
 	resp.Body.Close()
-	equals(t, "/_/authorize", redirectURI)
+	equals(t, 200, resp.StatusCode)
 }
 
 // Ensure the user sees a list of their gists when authorized.
@@ -96,7 +88,7 @@ func TestHandler_Authorize(t *testing.T) {
 	// Retrieve authorize redirect.
 	// We should be redirected to GitHub's OAuth URL.
 	// We should save the auth state to the session so it can be check on callback.
-	resp, _ := client.Get(h.Server.URL + "/_/authorize")
+	resp, _ := client.Get(h.Server.URL + "/_/login")
 	resp.Body.Close()
 	equals(t, "https", redirectURL.Scheme)
 	equals(t, "github.com", redirectURL.Host)
@@ -145,12 +137,12 @@ func TestHandler_Authorized(t *testing.T) {
 	defer h.Close()
 
 	// Process callback.
-	resp, _ := httpClient.Get(h.Server.URL + "/_/authorized?state=abc123")
+	resp, _ := httpClient.Get(h.Server.URL + "/_/login/callback?state=abc123")
 	resp.Body.Close()
 
 	// We should be redirected to the root path.
 	equals(t, 302, resp.StatusCode)
-	equals(t, "/", redirectURL.Path)
+	equals(t, "/_/dashboard", redirectURL.Path)
 
 	// The session should have the user id set.
 	equals(t, 1000, session.Values["UserID"])
@@ -170,7 +162,7 @@ func TestHandler_OEmbed(t *testing.T) {
 
 	// Create the gist in the database.
 	h.DB.Update(func(tx *gist.Tx) error {
-		return tx.SaveGist(&gist.Gist{ID: "abc123", Owner: "ben", Description: "My Gist"})
+		return tx.SaveGist(&gist.Gist{ID: "abc123", UserID: 1000, Description: "My Gist"})
 	})
 
 	// Retrieve oEmbed.
@@ -179,7 +171,7 @@ func TestHandler_OEmbed(t *testing.T) {
 	resp, err := http.Get(u.String())
 	ok(t, err)
 	equals(t, 200, resp.StatusCode)
-	equals(t, `{"version":"1.0","type":"rich","html":"","width":600,"height":300,"title":"My Gist","cache_age":0,"author_name":"ben","author_url":"https://github.com/ben","provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
+	equals(t, `{"version":"1.0","type":"rich","html":"","width":600,"height":300,"title":"My Gist","cache_age":0,"provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
 }
 
 // Ensure an oEmbed with width/height set is returned correctly.
@@ -189,7 +181,7 @@ func TestHandler_OEmbed_WidthHeight(t *testing.T) {
 
 	// Create the gist in the database.
 	h.DB.Update(func(tx *gist.Tx) error {
-		return tx.SaveGist(&gist.Gist{ID: "abc123", Owner: "ben", Description: "My Gist"})
+		return tx.SaveGist(&gist.Gist{ID: "abc123", UserID: 1000, Description: "My Gist"})
 	})
 
 	// Retrieve oEmbed.
@@ -198,7 +190,7 @@ func TestHandler_OEmbed_WidthHeight(t *testing.T) {
 	resp, err := http.Get(u.String())
 	ok(t, err)
 	equals(t, 200, resp.StatusCode)
-	equals(t, `{"version":"1.0","type":"rich","html":"","width":50,"height":60,"title":"My Gist","cache_age":0,"author_name":"ben","author_url":"https://github.com/ben","provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
+	equals(t, `{"version":"1.0","type":"rich","html":"","width":50,"height":60,"title":"My Gist","cache_age":0,"provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
 }
 
 // Ensure an oEmbed for a missing gist returns a 404.
@@ -264,7 +256,7 @@ func TestHandler_Gist_Authorized(t *testing.T) {
 		equals(t, "xxx", id)
 		return &gist.Gist{
 			ID:          "xxx",
-			Owner:       "john",
+			UserID:      1000,
 			Description: "my gist",
 			Public:      true,
 			URL:         "-",
@@ -307,7 +299,37 @@ func TestHandler_Gist_Authorized(t *testing.T) {
 }
 
 // Ensure a path is correctly parsed into gist id and filename.
-func TestHandler_ParsePath(t *testing.T) { t.Skip("pending (TT)") }
+func TestParsePath(t *testing.T) {
+	var tests = []struct {
+		path     string
+		gistID   string
+		filename string
+		err      string
+	}{
+		{path: "/", gistID: "", filename: "", err: "invalid path"},
+		{path: "/abc123", gistID: "abc123", filename: "", err: "non-canonical path"},
+		{path: "/abc123/", gistID: "abc123", filename: "", err: ""},
+		{path: "/abc123/index.html", gistID: "abc123", filename: "index.html", err: ""},
+		{path: "/user100/abc123", gistID: "abc123", filename: "", err: "non-canonical path"},
+		{path: "/user100/abc123/", gistID: "abc123", filename: "", err: ""},
+		{path: "/user100/abc123/index.html", gistID: "abc123", filename: "index.html", err: ""},
+		{path: "/user100/abc123/subdir/index.html", gistID: "", filename: "", err: "invalid path: /user100/abc123/subdir/index.html"},
+	}
+	for i, tt := range tests {
+		gistID, filename, err := gist.ParsePath(tt.path)
+		var errstr string
+		if err != nil {
+			errstr = err.Error()
+		}
+		if tt.err != errstr {
+			t.Errorf("%d. error: exp: %s, got: %s", i, tt.err, errstr)
+		} else if tt.gistID != gistID {
+			t.Errorf("%d. gistID: exp: %s, got: %s", i, tt.gistID, gistID)
+		} else if tt.filename != filename {
+			t.Errorf("%d. filename: exp: %s, got: %s", i, tt.filename, filename)
+		}
+	}
+}
 
 // TestHandler represents a handler used for testing.
 type TestHandler struct {

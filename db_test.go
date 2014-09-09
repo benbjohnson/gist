@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/benbjohnson/gist"
 )
@@ -28,10 +29,11 @@ func TestTx_SaveGist(t *testing.T) {
 
 	data := &gist.Gist{
 		ID:          "xxx",
-		Owner:       "john",
+		UserID:      1000,
 		Description: "My gist",
 		Public:      true,
 		URL:         "http://gist.github.com/john/xxx",
+		CreatedAt:   time.Now().UTC(),
 		Files: []*gist.GistFile{
 			{Size: 100, Filename: "index.html", RawURL: "http://raw.github.com/john/xxx/index.html"},
 		},

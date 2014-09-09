@@ -61,7 +61,7 @@ func TestGitHub_Gists(t *testing.T) {
 
 	equals(t, 1, len(a))
 	equals(t, "25f126746be9275592eb", a[0].ID)
-	equals(t, "foo", a[0].Owner)
+	equals(t, 1000, a[0].UserID)
 	equals(t, "My gist", a[0].Description)
 	equals(t, true, a[0].Public)
 	equals(t, "https://gist.github.com/25f126746be9275592eb", a[0].URL)
