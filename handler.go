@@ -89,10 +89,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/":
 		h.HandleRoot(w, r)
-	case "/_/authorize":
-		h.HandleAuthorize(w, r)
-	case "/_/authorized":
-		h.HandleAuthorized(w, r)
+	case "/_/dashboard":
+		h.HandleDashboard(w, r)
+	case "/_/login":
+		h.HandleLogin(w, r)
+	case "/_/login/callback":
+		h.HandleLoginCallback(w, r)
+	case "/_/logout":
+		h.HandleLogout(w, r)
 	case "/oembed", "/oembed/", "/oembed.xml":
 		h.HandleOEmbed(w, r)
 	case "/oembed.json":
@@ -118,10 +122,23 @@ func (h *Handler) Session(r *http.Request) *Session {
 
 // HandleRoot serves the home page.
 func (h *Handler) HandleRoot(w http.ResponseWriter, r *http.Request) {
-	// Retrieve session. If not authorized then send to GitHub.
+	// Retrieve session. If authorized then forward to the dashboard.
+	session := h.Session(r)
+	if session.Authenticated() {
+		http.Redirect(w, r, "/_/dashboard", http.StatusFound)
+		return
+	}
+
+	// Render home page.
+	_ = (&tmpl{}).Index(w)
+}
+
+// HandleDashboard serves the dashboard page.
+func (h *Handler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session. If not authorized then send to home page.
 	session := h.Session(r)
 	if !session.Authenticated() {
-		http.Redirect(w, r, "/_/authorize", http.StatusFound)
+		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
 
@@ -145,11 +162,11 @@ func (h *Handler) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write gists out.
-	_ = (&tmpl{}).Index(w, gists)
+	_ = (&tmpl{}).Dashboard(w, gists)
 }
 
-// HandleAuthorize redirects the user to GitHub OAuth2 authorization.
-func (h *Handler) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
+// HandleLogin redirects the user to GitHub OAuth2 authorization.
+func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Generate auth state.
 	var b [16]byte
 	_, _ = rand.Read(b[:])
@@ -164,8 +181,8 @@ func (h *Handler) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, h.config.AuthCodeURL(state), http.StatusFound)
 }
 
-// HandleAuthorized receives the GitHub OAuth2 callback.
-func (h *Handler) HandleAuthorized(w http.ResponseWriter, r *http.Request) {
+// HandleLoginCallback receives the GitHub OAuth2 callback.
+func (h *Handler) HandleLoginCallback(w http.ResponseWriter, r *http.Request) {
 	session := h.Session(r)
 	state, _ := session.Values["AuthState"].(string)
 
@@ -208,7 +225,18 @@ func (h *Handler) HandleAuthorized(w http.ResponseWriter, r *http.Request) {
 	session.Values["UserID"] = user.ID
 	_ = session.Save(r, w)
 
-	// Redirect to home page.
+	// Redirect to dashboard page.
+	http.Redirect(w, r, "/_/dashboard", http.StatusFound)
+}
+
+// HandleLogout removes user authentication.
+func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	// Save state to session.
+	session := h.Session(r)
+	session.Values = make(map[interface{}]interface{})
+	_ = session.Save(r, w)
+
+	// Redirect user to home page.
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

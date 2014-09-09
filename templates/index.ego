@@ -1,25 +1,46 @@
-<%! func (_ *tmpl) Index(w io.Writer, gists []*Gist) error %>
+<%! func (t *tmpl) Index(w io.Writer) error %>
 
 <!DOCTYPE html>
 <html lang="en">
-  <body>
-    <h1>Gist Exposed!</h1>
+  <head>
+    <% t.head(w) %>
+  </head>
 
-    <h2>Recent Gists</h2>
+  <body class="index">
+    <div class="container">
+      <div class="header">
+        <ul class="nav nav-pills pull-right">
+          <li><a href="/_/login">Sign in</a></li>
+        </ul>
+        <h3 class="text-muted">Gist Exposed!</h3>
+      </div>
 
-    <ol>
-      <% for _, g := range gists { %>
-        <li>
-          <a href="/<%=g.Owner%>/<%=g.ID%>">
-            <% if g.Description != "" { %>
-              <%= g.Description %>
-            <% } else { %>
-              <em>Untitled</em>
-            <% } %>
-          </a>
-        </li>
-      <% } %>
-    </ol>
+      <div class="jumbotron">
+        <h1>Embed Your Gists</h1>
+        <p class="lead">
+          Gist Exposed is a simple service for mirroring GitHub gists and allowing you to embed them on other sites.
+        </p>
+        <p>
+            <a class="btn btn-lg btn-success" href="/_/login" role="button">Sign in with GitHub</a>
+        </p>
+      </div>
 
+      <div class="row marketing">
+        <div class="col-lg-6">
+          <h4>oEmbed API</h4>
+          <p>
+            Sites can use the <a href="http://oembed.com/">oEmbed</a> API to create embeddable iframes to host your gists.
+          </p>
+        </div>
+
+        <div class="col-lg-6">
+          <h4>Chromeless</h4>
+          <p>
+            Gists are displayed as-is with no branding or border.
+            Simply drop them into your site and style them however you'd like.
+          </p>
+        </div>
+      </div>
+    </div> <!-- /container -->
   </body>
 </html>
