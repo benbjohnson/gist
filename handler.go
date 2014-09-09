@@ -326,13 +326,19 @@ func (h *Handler) HandleGist(w http.ResponseWriter, r *http.Request) {
 		filename = DefaultFilename
 	}
 
+	// Parse referrer.
+	referrer, _ := url.Parse(r.Referer())
+
 	// Only reload if the following conditions are met:
 	//
 	//   1. User is logged in.
 	//   2. User is loading an HTML page.
 	//   3. User is loading page directly (i.e. not in an iframe).
 	//
-	reload := (session.Authenticated() && filepath.Ext(filename) == ".html" && r.Referer() == "")
+	reload := true
+	reload = reload && session.Authenticated()
+	reload = reload && filepath.Ext(filename) == ".html"
+	reload = reload && (r.Referer() == "" || referrer.Host == r.Host)
 
 	// Update gist.
 	if reload {

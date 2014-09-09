@@ -3,14 +3,13 @@ TODO
 
 ## Uncompleted
 
-- [ ] Unit Tests
-  - [x] MockGitHubClient
-  - [x] GitHub tests
-  - [ ] Handler tests
-  - [ ] DB tests
 - [ ] UI
-  - [ ] Root (unauthenticated)
-  - [ ] Root (authenticated)
+  - [ ] Home page (unauthenticated)
+  - [ ] Dashboard (authenticated)
+- [ ] Visually test embeds
+- [ ] Add .gist-exposed class to iframe.
+- [ ] Get better logo
+- [ ] Favicon
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
@@ -40,3 +39,7 @@ TODO
 - [x] Log management (Papertrail)
 - [x] Metrics (Datadog)
 - [x] Reload if accessing any .html
+- [x] Unit Tests
+  - [x] MockGitHubClient
+  - [x] GitHub tests
+  - [x] Handler tests
