@@ -3,8 +3,6 @@ TODO
 
 ## Uncompleted
 
-- [ ] Get better logo
-- [ ] Favicon
 - [ ] Embed.ly integration
 - [ ] Test on Medium
 
@@ -43,3 +41,4 @@ TODO
   - [x] Dashboard (authenticated)
 - [x] Visually test embeds
 - [x] Add .gist-exposed class to iframe.
+- [x] Favicon

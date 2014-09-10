@@ -327,9 +327,9 @@ func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 
 	// Set HTML.
 	var buf bytes.Buffer
-	buf.WriteString(`<div class="gist-exposed" style="position: relative; padding-bottom: ` + strconv.Itoa(height) + `; padding-top: 0px; height: 0; overflow: hidden;">`)
-	buf.WriteString(`<iframe style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" src="` + html.EscapeString(u.String()) + `"></iframe>`)
-	buf.WriteString(`</div>`)
+	_, _ = buf.WriteString(`<div class="gist-exposed" style="position: relative; padding-bottom: ` + strconv.Itoa(height) + `; padding-top: 0px; height: 0; overflow: hidden;">`)
+	_, _ = buf.WriteString(`<iframe style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" src="` + html.EscapeString(u.String()) + `"></iframe>`)
+	_, _ = buf.WriteString(`</div>`)
 	resp.HTML = buf.String()
 
 	// Write out the JSON-encoded response.
