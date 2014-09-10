@@ -100,6 +100,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.HandleOEmbed(w, r)
 	case "/oembed.json":
 		h.HandleOEmbedJSON(w, r)
+	case "/logo.png":
+		_, _ = w.Write(logo())
 	default:
 		h.HandleGist(w, r)
 	}
