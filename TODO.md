@@ -3,8 +3,6 @@ TODO
 
 ## Uncompleted
 
-- [ ] Visually test embeds
-- [ ] Add .gist-exposed class to iframe.
 - [ ] Get better logo
 - [ ] Favicon
 - [ ] Embed.ly integration
@@ -43,3 +41,5 @@ TODO
 - [x] UI
   - [x] Home page (unauthenticated)
   - [x] Dashboard (authenticated)
+- [x] Visually test embeds
+- [x] Add .gist-exposed class to iframe.

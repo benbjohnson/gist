@@ -1,6 +1,7 @@
 package gist_test
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -171,7 +172,9 @@ func TestHandler_OEmbed(t *testing.T) {
 	resp, err := http.Get(u.String())
 	ok(t, err)
 	equals(t, 200, resp.StatusCode)
-	equals(t, `{"version":"1.0","type":"rich","html":"","width":600,"height":300,"title":"My Gist","cache_age":0,"provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
+
+	html, _ := json.Marshal(`<div class="gist-exposed" style="position: relative; padding-bottom: 300; padding-top: 0px; height: 0; overflow: hidden;"><iframe style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" src="https://gist.exposed/benbjohnson/abc123/"></iframe></div>`)
+	equals(t, `{"version":"1.0","type":"rich","html":`+string(html)+`,"height":300,"title":"My Gist","provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
 }
 
 // Ensure an oEmbed with width/height set is returned correctly.
@@ -190,7 +193,16 @@ func TestHandler_OEmbed_WidthHeight(t *testing.T) {
 	resp, err := http.Get(u.String())
 	ok(t, err)
 	equals(t, 200, resp.StatusCode)
-	equals(t, `{"version":"1.0","type":"rich","html":"","width":50,"height":60,"title":"My Gist","cache_age":0,"provider_name":"Gist Exposed!","provider_url":"https://gist.exposed"}`+"\n", readall(resp.Body))
+
+	// Unmarshal and check width & height.
+	var o struct {
+		Width  int `json:"width"`
+		Height int `json:"height"`
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(b, &o)
+	equals(t, 50, o.Width)
+	equals(t, 60, o.Height)
 }
 
 // Ensure an oEmbed for a missing gist returns a 404.

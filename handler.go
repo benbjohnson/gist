@@ -1,10 +1,12 @@
 package gist
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"mime"
@@ -26,9 +28,6 @@ var errNonCanonicalPath = errors.New("non-canonical path")
 const (
 	// DefaultFilename is the default file used if none is specified in the URL.
 	DefaultFilename = "index.html"
-
-	// DefaultEmbedWidth is the width returned from the oEmbed endpoint.
-	DefaultEmbedWidth = 600
 
 	// DefaultEmbedHeight is the height returned from the oEmbed endpoint.
 	DefaultEmbedHeight = 300
@@ -262,12 +261,12 @@ func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 		Version      string `json:"version"`
 		Type         string `json:"type"`
 		HTML         string `json:"html"`
-		Width        int    `json:"width"`
-		Height       int    `json:"height"`
-		Title        string `json:"title"`
-		CacheAge     int    `json:"cache_age"`
-		ProviderName string `json:"provider_name"`
-		ProviderURL  string `json:"provider_url"`
+		Width        int    `json:"width,omitempty"`
+		Height       int    `json:"height,omitempty"`
+		Title        string `json:"title,omitempty"`
+		CacheAge     int    `json:"cache_age,omitempty"`
+		ProviderName string `json:"provider_name,omitempty"`
+		ProviderURL  string `json:"provider_url,omitempty"`
 	}
 
 	// Retrieve URL parameter and parse.
@@ -280,7 +279,7 @@ func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 	q := u.Query()
 
 	// Retrieve width & height.
-	width, height := DefaultEmbedWidth, DefaultEmbedHeight
+	width, height := 0, DefaultEmbedHeight
 	if v, _ := strconv.Atoi(q.Get("width")); v > 0 {
 		width = v
 	}
@@ -325,6 +324,13 @@ func (h *Handler) HandleOEmbedJSON(w http.ResponseWriter, r *http.Request) {
 		ProviderName: "Gist Exposed!",
 		ProviderURL:  "https://gist.exposed",
 	}
+
+	// Set HTML.
+	var buf bytes.Buffer
+	buf.WriteString(`<div class="gist-exposed" style="position: relative; padding-bottom: ` + strconv.Itoa(height) + `; padding-top: 0px; height: 0; overflow: hidden;">`)
+	buf.WriteString(`<iframe style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: none;" src="` + html.EscapeString(u.String()) + `"></iframe>`)
+	buf.WriteString(`</div>`)
+	resp.HTML = buf.String()
 
 	// Write out the JSON-encoded response.
 	w.Header().Set("Content-Type", "application/json")
