@@ -77,7 +77,7 @@ func (h *Handler) DB() *DB { return h.db }
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Ignore the noise.
 	if r.URL.Path == "/favicon.ico" {
-		http.NotFound(w, r)
+		_, _ = w.Write(favicon())
 		return
 	}
 
